@@ -53,66 +53,83 @@ import java.util.UUID;
 public class SecurityConfig {
 
     private final AppConfigProperties appConfigProperties;
+
     @Bean
-    public RegisteredClientRepository registeredClientRepository() {
-        AppConfigProperties.ClientSettings client = appConfigProperties.getClient();
-        RegisteredClient webClient = RegisteredClient
+    public RegisteredClientRepository registeredClientRepository(final PasswordEncoder passwordEncoder) {
+        AppConfigProperties.ClientSettings registeredClient = appConfigProperties.getRegisteredClient();
+        RegisteredClient client = RegisteredClient
                 .withId(UUID.randomUUID().toString())
-                .clientId(client.getClientId())
-                .clientSecret(passwordEncoder().encode(client.getClientSecret()))
+                .clientId(registeredClient.getClientId())
+                .clientSecret(passwordEncoder.encode(registeredClient.getClientSecret()))
+                .authorizationGrantTypes(authorizationGrantTypes -> authorizationGrantTypes
+                        .addAll(Set.of(AuthorizationGrantType.AUTHORIZATION_CODE, AuthorizationGrantType.REFRESH_TOKEN)))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantTypes(authorizationGrantTypes ->
-                        authorizationGrantTypes.addAll(Set.of(
-                                AuthorizationGrantType.CLIENT_CREDENTIALS,
-                                AuthorizationGrantType.REFRESH_TOKEN,
-                                AuthorizationGrantType.AUTHORIZATION_CODE)))
-                .scopes(scopes -> scopes.addAll(Set.of(
-                        OidcScopes.EMAIL,
-                        OidcScopes.OPENID,
-                        OidcScopes.PROFILE,
-                        "read",
-                        "write",
-                        "read.write")))
+                .redirectUri(registeredClient.getClientUri() + "/login/oauth2/code/"+ registeredClient.getClientId())
+                .postLogoutRedirectUri(registeredClient.getClientUri() + "/logout")
+                .scopes(scopes -> scopes
+                        .addAll(Set.of(
+                                OidcScopes.OPENID,// openid scope is mandatory for authentication
+                                OidcScopes.PROFILE,
+                                OidcScopes.EMAIL)))
                 .build();
-        return new InMemoryRegisteredClientRepository(webClient);
+        return new InMemoryRegisteredClientRepository(client);
     }
-    //This is primarily configured to handle OAuth2 and OpenID Connect specific endpoints. It sets up the security for the authorization server, handling token endpoints, client authentication, etc.
+    /**
+     * This first filter chain is for authorization server-specific configurations.
+     * @param http HttpSecurity instance
+     * @return {@link SecurityFilterChain }
+     * @throws Exception
+     */
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(final HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
+
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(Customizer.withDefaults())
-                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers(appConfigProperties.getWhiteList()).permitAll()
-                        .requestMatchers("/**", "/oauth2/jwks/").hasAnyAuthority("SCOPE_keys.write")
-                        .anyRequest().authenticated())
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .with(authorizationServerConfigurer, (authorizationServer) -> authorizationServer
-                        .oidc(Customizer.withDefaults())
-                        .clientAuthentication(clientAuth -> clientAuth
-                                .authenticationProvider(authenticationProvider()))) // Enable Open ID
-                // Redirect to the login page when not authenticated from the
-                // authorization endpoint
+                        .oidc(Customizer.withDefaults()))// enable openid connect
+                .authorizeHttpRequests((authorizeRequests) -> authorizeRequests
+                        .anyRequest().authenticated())
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
                                 new LoginUrlAuthenticationEntryPoint("/login"),
                                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                         ))
-                .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
                 .build();
+
     }
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(final HttpSecurity http) throws Exception {
         return http
-                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/login", "/error", "/main.css").permitAll()
-                        .anyRequest().authenticated())
-                .formLogin((login) -> login.loginPage("/login"))
+                .formLogin(Customizer.withDefaults()) // enable login
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests.anyRequest().authenticated())
                 .build();
+    }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    //TODO: Remove this when you have configure user details from the DB
+    @Bean
+    public UserDetailsService userDetailsService(final PasswordEncoder passwordEncoder) {
+        List<UserDetails> users = List.of(
+                User.builder()
+                        .username("user1")
+                        .password(passwordEncoder.encode("password"))
+                        .roles("USER")
+                        .build(),
+                User.builder()
+                        .username("user2")
+                        .password(passwordEncoder.encode("password"))
+                        .roles("USER")
+                        .build()
+        );
+        return new InMemoryUserDetailsManager(users);
     }
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
@@ -147,27 +164,7 @@ public class SecurityConfig {
         }
         return keyPair;
     }
-    //TODO: Remove this when you have configure user details from the DB
-    @Bean
-    public UserDetailsService userDetailsService(final PasswordEncoder passwordEncoder) {
-        List<UserDetails> users = List.of(
-                User.builder()
-                        .username("user1")
-                        .password(passwordEncoder.encode("password"))
-                        .roles("USER")
-                        .build(),
-                User.builder()
-                        .username("user2")
-                        .password(passwordEncoder.encode("password"))
-                        .roles("USER")
-                        .build()
-        );
-        return new InMemoryUserDetailsManager(users);
-    }
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService(passwordEncoder()));
