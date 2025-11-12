@@ -1,0 +1,61 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  registered-client:
+    client-id: gateway-client
+    client-secret: 8adLFE4RHIqYOXhB7ZLjgqdRJWAioTMzlblC8XyKrc8=
+    client-uri: http://localhost:9001
+  jwt:
+    expiration-ms: 7200000 # 2 hours
+    secret: ""
+  kafka:
+    notification-topic: appointment-system-notifications-test
+  client-url: http://localhost:4200
+  verification-token:
+    expiration-ms: 86400000 # 24 hours
+  encryption-key: "test"
+  open-api:
+    info:
+      title: Appointment Auth Service - TEST
+      description: Appointment Authentication Service
+      version: 1.0.0
+  cors:
+    allowed-origins:
+      - "*"
+    allowed-methods:
+      - "*"
+    allowed-headers:
+      - "*"
+    max-age: 3600
+  white-list:
+    - "*"
+  # Auth Server In Memory Client
+  client:
+    client-id: gatewat-client
+    client-secret: "testSecret"
+    client-url: http://localhost:9000
+
+logging:
+  level:
+    org.hibernate.orm.jdbc.bind: trace
+
+grpc:
+  server:
+    port: 9090

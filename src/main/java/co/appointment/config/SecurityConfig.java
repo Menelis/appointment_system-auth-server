@@ -1,5 +1,6 @@
 package co.appointment.config;
 
+import co.appointment.security.service.UserDetailsServiceImpl;
 import co.appointment.shared.model.CorsSettings;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -16,9 +17,6 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -31,7 +29,6 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -43,7 +40,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -53,6 +49,7 @@ import java.util.UUID;
 public class SecurityConfig {
 
     private final AppConfigProperties appConfigProperties;
+    private final UserDetailsServiceImpl userDetailsService;
 
     @Bean
     public RegisteredClientRepository registeredClientRepository(final PasswordEncoder passwordEncoder) {
@@ -78,20 +75,23 @@ public class SecurityConfig {
      * This first filter chain is for authorization server-specific configurations.
      * @param http HttpSecurity instance
      * @return {@link SecurityFilterChain }
-     * @throws Exception
+     * @throws Exception exception
      */
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(final HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
+        final String[] customExposedEndpoints = appConfigProperties.getCustomExposedEndpoints();
 
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+                .securityMatcher(customExposedEndpoints)
+                .csrf(csrf -> csrf.ignoringRequestMatchers(customExposedEndpoints))
                 .with(authorizationServerConfigurer, (authorizationServer) -> authorizationServer
                         .oidc(Customizer.withDefaults()))// enable openid connect
                 .authorizeHttpRequests((authorizeRequests) -> authorizeRequests
+                        .requestMatchers(customExposedEndpoints).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
@@ -100,36 +100,20 @@ public class SecurityConfig {
                         ))
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
                 .build();
-
     }
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(final HttpSecurity http) throws Exception {
         return http
                 .formLogin(Customizer.withDefaults()) // enable login
-                .authorizeHttpRequests(authorizeRequests -> authorizeRequests.anyRequest().authenticated())
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .requestMatchers(appConfigProperties.getWhiteList()).permitAll()
+                        .anyRequest().authenticated())
                 .build();
     }
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-    //TODO: Remove this when you have configure user details from the DB
-    @Bean
-    public UserDetailsService userDetailsService(final PasswordEncoder passwordEncoder) {
-        List<UserDetails> users = List.of(
-                User.builder()
-                        .username("user1")
-                        .password(passwordEncoder.encode("password"))
-                        .roles("USER")
-                        .build(),
-                User.builder()
-                        .username("user2")
-                        .password(passwordEncoder.encode("password"))
-                        .roles("USER")
-                        .build()
-        );
-        return new InMemoryUserDetailsManager(users);
     }
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
@@ -164,14 +148,12 @@ public class SecurityConfig {
         }
         return keyPair;
     }
-
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService(passwordEncoder()));
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService);
         authenticationProvider.setPasswordEncoder(passwordEncoder());
         return authenticationProvider;
     }
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
         CorsSettings cors = appConfigProperties.getCors();
