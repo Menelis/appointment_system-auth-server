@@ -44,7 +44,7 @@ public class User extends BaseEntity {
             mappedBy = "user",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
-            fetch = FetchType.EAGER)
+            fetch = FetchType.LAZY)
     private Set<UserRole> userRoles = new HashSet<>();
 
     public void addUserRole(Role role) {

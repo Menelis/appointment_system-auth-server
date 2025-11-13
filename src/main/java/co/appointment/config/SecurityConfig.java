@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -17,6 +18,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -29,9 +31,11 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -40,35 +44,67 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final AppConfigProperties appConfigProperties;
     private final UserDetailsServiceImpl userDetailsService;
 
+//    @Bean
+//    public RegisteredClientRepository registeredClientRepository(final JdbcTemplate jdbcTemplate) {
+//        return new JdbcRegisteredClientRepository(jdbcTemplate);
+//    }
+//    @Bean
+//    public OAuth2AuthorizationService authorizationService(final JdbcTemplate jdbcTemplate,
+//                                                           final RegisteredClientRepository registeredClientRepository) {
+//        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+//    }
     @Bean
     public RegisteredClientRepository registeredClientRepository(final PasswordEncoder passwordEncoder) {
-        AppConfigProperties.ClientSettings registeredClient = appConfigProperties.getRegisteredClient();
-        RegisteredClient client = RegisteredClient
-                .withId(UUID.randomUUID().toString())
-                .clientId(registeredClient.getClientId())
-                .clientSecret(passwordEncoder.encode(registeredClient.getClientSecret()))
-                .authorizationGrantTypes(authorizationGrantTypes -> authorizationGrantTypes
-                        .addAll(Set.of(AuthorizationGrantType.AUTHORIZATION_CODE, AuthorizationGrantType.REFRESH_TOKEN)))
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .redirectUri(registeredClient.getClientUri() + "/login/oauth2/code/"+ registeredClient.getClientId())
-                .postLogoutRedirectUri(registeredClient.getClientUri() + "/logout")
-                .scopes(scopes -> scopes
-                        .addAll(Set.of(
-                                OidcScopes.OPENID,// openid scope is mandatory for authentication
-                                OidcScopes.PROFILE,
-                                OidcScopes.EMAIL)))
-                .build();
+        AppConfigProperties.ClientSettings registeredClient = appConfigProperties.getRegisteredClients()
+                .stream()
+                .filter(AppConfigProperties.ClientSettings::isEnabled)
+                .findFirst().orElse(null);
+        if(registeredClient == null) {
+            throw new RuntimeException("No registered Client found");
+        }
+        RegisteredClient.Builder registeredClientBuilder = RegisteredClient
+                .withId(registeredClient.getClientId())
+                .clientId(registeredClient.getClientId());
+        // Public client does not require secret
+        if(StringUtils.hasText(registeredClient.getClientSecret())) {
+            registeredClientBuilder.clientSecret(passwordEncoder.encode(registeredClient.getClientSecret()));
+        }
+        registeredClientBuilder.clientAuthenticationMethods(clientAuthenticationMethods -> clientAuthenticationMethods
+                .addAll(registeredClient.getClientAuthenticationMethods()
+                        .stream()
+                        .map(ClientAuthenticationMethod::new)
+                        .collect(Collectors.toSet())));
+        registeredClientBuilder.authorizationGrantTypes(authorizationGrantTypes -> authorizationGrantTypes
+                .addAll(registeredClient.getAuthorizationGrantTypes().stream()
+                        .map(AuthorizationGrantType::new)
+                        .collect(Collectors.toSet())));
+        registeredClientBuilder.redirectUris(redirectUris -> redirectUris
+                .addAll(registeredClient.getRedirectUris()))
+                .postLogoutRedirectUris(postLogoutUris -> postLogoutUris
+                        .addAll(registeredClient.getPostLogoutRedirectUris()));
+        registeredClientBuilder.scopes(scopes -> scopes
+                .addAll(registeredClient.getScopes()));
+        if(!StringUtils.hasText(registeredClient.getClientSecret())) {
+            registeredClientBuilder.clientSettings(
+                    ClientSettings.builder()
+                            .requireProofKey(false)
+                            .build()
+            );
+        }
+        RegisteredClient client = registeredClientBuilder.build();
+        log.info("Client is:{}", client);
         return new InMemoryRegisteredClientRepository(client);
     }
     /**
@@ -148,12 +184,12 @@ public class SecurityConfig {
         }
         return keyPair;
     }
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService);
-        authenticationProvider.setPasswordEncoder(passwordEncoder());
-        return authenticationProvider;
-    }
+//    @Bean
+//    public AuthenticationProvider authenticationProvider() {
+//        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService);
+//        authenticationProvider.setPasswordEncoder(passwordEncoder());
+//        return authenticationProvider;
+//    }
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
         CorsSettings cors = appConfigProperties.getCors();

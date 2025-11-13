@@ -5,7 +5,7 @@ import co.appointment.shared.model.OpenApiSettings;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -15,7 +15,7 @@ public class AppConfigProperties {
     private OpenApiSettings openApi;
     private String[] whiteList;
     private String[] customExposedEndpoints;
-    private ClientSettings registeredClient;
+    private List<ClientSettings> registeredClients = new ArrayList<>();
     private String encryptionKey;
     private CorsSettings cors;
     private KafkaSettings kafka;
@@ -36,6 +36,12 @@ public class AppConfigProperties {
     public static class ClientSettings {
         private String clientId;
         private String clientSecret;
-        private String clientUri;
+        //private String clientUri;
+        private Set<String> scopes;
+        private Set<String> authorizationGrantTypes;
+        private Set<String> clientAuthenticationMethods;
+        private Set<String> redirectUris;
+        private Set<String> postLogoutRedirectUris;
+        private boolean enabled = false;
     }
 }

@@ -12,14 +12,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleException(final Exception exception) {
-        log.error(exception.getMessage(), exception);
-        return ResponseEntity.internalServerError().body(new ApiResponse<>(false, SharedConstants.INTERNAL_SERVER_ERROR));
-    }
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<?> handleBadCredentialsException(final BadCredentialsException exception) {
-        log.error(exception.getMessage(), exception);
-        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Invalid username or password"));
-    }
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<?> handleException(final Exception exception) {
+//        log.error(exception.getMessage(), exception);
+//        return ResponseEntity.internalServerError().body(new ApiResponse<>(false, SharedConstants.INTERNAL_SERVER_ERROR));
+//    }
+//    @ExceptionHandler(BadCredentialsException.class)
+//    public ResponseEntity<?> handleBadCredentialsException(final BadCredentialsException exception) {
+//        log.error(exception.getMessage(), exception);
+//        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Invalid username or password"));
+//    }
 }
