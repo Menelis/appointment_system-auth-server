@@ -3,11 +3,10 @@ package co.appointment.config;
 import co.appointment.shared.model.CorsSettings;
 import co.appointment.shared.model.OpenApiSettings;
 import lombok.Data;
+import org.hibernate.sql.ast.tree.expression.Collation;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @ConfigurationProperties(prefix = "app")
 @Data
@@ -15,7 +14,7 @@ public class AppConfigProperties {
     private OpenApiSettings openApi;
     private String[] whiteList;
     private String[] customExposedEndpoints;
-    private List<ClientSettings> registeredClients = new ArrayList<>();
+    private List<RegisteredClientSetting> registeredClients = new ArrayList<>();
     private String encryptionKey;
     private CorsSettings cors;
     private KafkaSettings kafka;
@@ -33,15 +32,24 @@ public class AppConfigProperties {
     }
 
     @Data
-    public static class ClientSettings {
+    public static class ClientSetting {
+        private boolean requireProofOfKey = false;
+    }
+    @Data
+    public static class RegisteredClientSetting {
         private String clientId;
         private String clientSecret;
-        //private String clientUri;
-        private Set<String> scopes;
-        private Set<String> authorizationGrantTypes;
-        private Set<String> clientAuthenticationMethods;
-        private Set<String> redirectUris;
-        private Set<String> postLogoutRedirectUris;
-        private boolean enabled = false;
+        private Set<String> scopes = new HashSet<>();
+        private Collection<String> authorizationGrantTypes = new HashSet<>();
+        private Set<String> clientAuthenticationMethods = new HashSet<>();
+        private Set<String> redirectUris = new HashSet<>();
+        private Set<String> postLogoutRedirectUris = new HashSet<>();
+        private ClientSetting clientSettings = new ClientSetting();
+        private TokenSetting tokenSetting = new TokenSetting();
+    }
+    @Data
+    public static class TokenSetting {
+        private long accessTokenTimeToLive = 120;
+        private long refreshTokenTimeToLive = 120;
     }
 }

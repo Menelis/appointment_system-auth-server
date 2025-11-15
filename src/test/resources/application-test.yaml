@@ -51,10 +51,22 @@ app:
     client-id: gatewat-client
     client-secret: "testSecret"
     client-url: http://localhost:9000
+  registered-clients:
+    -
+      client-id: test
+      client-authentication-methods:
+        - "none"
+      authorization-grant-types:
+        - "authorization_code"
+      redirect-uris:
+        - "http://localhost"
+      post-logout-redirect-uris:
+        - "http://localhost"
 
 logging:
   level:
-    org.hibernate.orm.jdbc.bind: trace
+    root: info
+    org.springframework.security: trace
 
 grpc:
   server:
