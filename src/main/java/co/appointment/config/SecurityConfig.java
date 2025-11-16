@@ -114,12 +114,13 @@ public class SecurityConfig {
         return http
                 .cors(Customizer.withDefaults())
                 //.csrf(csrf -> csrf.ignoringRequestMatchers(whiteList))
-                .csrf(csrf -> csrf.ignoringRequestMatchers(customExposedEndpoints))
-                .securityMatcher(customExposedEndpoints)
+                //.csrf(csrf -> csrf.ignoringRequestMatchers(customExposedEndpoints))
+                //.securityMatcher(customExposedEndpoints)
+                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
                         .oidc(Customizer.withDefaults())) // Enable Open ID
                 .authorizeHttpRequests(authRequests -> authRequests
-                        .requestMatchers(customExposedEndpoints).permitAll()
+                        //.requestMatchers(customExposedEndpoints).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
@@ -134,7 +135,7 @@ public class SecurityConfig {
         return http
                 .formLogin(Customizer.withDefaults())
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers(appConfigProperties.getWhiteList()).permitAll()
+                        //.requestMatchers(appConfigProperties.getWhiteList()).permitAll()
                         .anyRequest().authenticated())
                 .build();
     }
