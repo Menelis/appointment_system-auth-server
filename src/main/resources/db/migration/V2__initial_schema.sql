@@ -9,6 +9,7 @@ client_name VARCHAR(200) NOT NULL,
 client_authentication_methods VARCHAR(1000) NOT NULL,
 authorization_grant_types VARCHAR(1000) NOT NULL,
 redirect_uris VARCHAR(1000),
+post_logout_redirect_uris VARCHAR(1000),
 scopes VARCHAR(1000),
 client_settings VARCHAR(2000),
 token_settings VARCHAR(2000)
