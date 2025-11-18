@@ -33,6 +33,7 @@ public class Oauth2AccessTokenCustomizer implements OAuth2TokenCustomizer<JwtEnc
                 claims.put(TokenConstants.ROLES, roles);
                 claims.put(TokenConstants.EMAIL, user.getEmail());
                 claims.put(TokenConstants.FULL_NAME, String.format("%s %s", user.getFirstName(), user.getLastName()));
+                claims.put(TokenConstants.USER_ID, user.getId());
             });
         }
     }

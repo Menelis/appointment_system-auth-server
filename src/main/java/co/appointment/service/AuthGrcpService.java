@@ -41,7 +41,7 @@ public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
                 .setLastName(user.getLastName())
                 .setContactNo(user.getContactNo())
                 .setEmail(user.getEmail())
-                .setEmail(user.getEmail());
+                .setFullName(String.format("%s %s", user.getFirstName(), user.getLastName()));
 
         //Add roles to userResponse
         user.getUserRoles().stream()
