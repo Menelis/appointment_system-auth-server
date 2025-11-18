@@ -109,19 +109,12 @@ public class SecurityConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(final HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = authorizationServer();
-        final String[] customExposedEndpoints = appConfigProperties.getCustomExposedEndpoints();
-        final String[] whiteList = appConfigProperties.getWhiteList();
         return http
                 .cors(Customizer.withDefaults())
-                //.csrf(csrf -> csrf.ignoringRequestMatchers(whiteList))
-                //.csrf(csrf -> csrf.ignoringRequestMatchers(customExposedEndpoints))
-                //.securityMatcher(customExposedEndpoints)
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
                         .oidc(Customizer.withDefaults())) // Enable Open ID
-                .authorizeHttpRequests(authRequests -> authRequests
-                        //.requestMatchers(customExposedEndpoints).permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(authRequests -> authRequests.anyRequest().authenticated())
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
                                 new LoginUrlAuthenticationEntryPoint("/login"),
@@ -134,9 +127,7 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(final HttpSecurity http) throws Exception {
         return http
                 .formLogin(Customizer.withDefaults())
-                .authorizeHttpRequests((authorize) -> authorize
-                        //.requestMatchers(appConfigProperties.getWhiteList()).permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests((authorize) -> authorize.anyRequest().authenticated())
                 .build();
     }
     @Bean
