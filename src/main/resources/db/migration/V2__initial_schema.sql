@@ -1,5 +1,5 @@
 -- OAuth2 Registered Clients Table
-CREATE TABLE oauth2_registered_client (
+CREATE TABLE IF NOT EXISTS oauth2_registered_client (
 id VARCHAR(100) PRIMARY KEY,
 client_id VARCHAR(100) NOT NULL,
 client_id_issued_at TIMESTAMP,
@@ -16,7 +16,7 @@ token_settings VARCHAR(2000)
 );
 
 -- OAuth2 Authorization Table
-CREATE TABLE oauth2_authorization (
+CREATE TABLE IF NOT EXISTS oauth2_authorization (
 id VARCHAR(100) PRIMARY KEY,
 registered_client_id VARCHAR(100) NOT NULL,
 principal_name VARCHAR(200) NOT NULL,
