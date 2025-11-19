@@ -1,5 +1,6 @@
 package co.appointment.config;
 
+import co.appointment.cache.CustomRequestCache;
 import co.appointment.shared.model.CorsSettings;
 import co.appointment.token.OAuth2PublicClientRefreshTokenGenerator;
 import co.appointment.token.Oauth2AccessTokenCustomizer;
@@ -63,10 +64,16 @@ public class SecurityConfig {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = authorizationServer();
         return http
                 .cors(Customizer.withDefaults())
-                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+                .csrf(csrf -> csrf.ignoringRequestMatchers(appConfigProperties.getCustomExposedEndpoints()) // OAuth 2.0 and OpenID Connect protocol endpoints exposed by the Authorization Server.
+                        .ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher())) // Custom endpoints
+                .securityMatchers(securityMatcher -> securityMatcher
+                        .requestMatchers(authorizationServerConfigurer.getEndpointsMatcher()) // OAuth 2.0 and OpenID Connect protocol endpoints exposed by the Authorization Server.
+                        .requestMatchers(appConfigProperties.getCustomExposedEndpoints())) // Custom endpoints
                 .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
                         .oidc(Customizer.withDefaults())) // Enable Open ID
-                .authorizeHttpRequests(authRequests -> authRequests.anyRequest().authenticated())
+                .authorizeHttpRequests(authRequests -> authRequests
+                        .requestMatchers(appConfigProperties.getCustomExposedEndpoints()).permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
                                 new LoginUrlAuthenticationEntryPoint("/login"),
@@ -76,10 +83,15 @@ public class SecurityConfig {
                 .build();
     }
     @Bean
-    public SecurityFilterChain defaultSecurityFilterChain(final HttpSecurity http) throws Exception {
+    public SecurityFilterChain defaultSecurityFilterChain(final HttpSecurity http,
+                                                          final CustomRequestCache cache) throws Exception {
         return http
                 .formLogin(Customizer.withDefaults())
-                .authorizeHttpRequests((authorize) -> authorize.anyRequest().authenticated())
+                .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers(appConfigProperties.getWhiteList()).permitAll()
+                        .anyRequest().permitAll())
+                .requestCache(requestCacheConfigurer -> requestCacheConfigurer
+                        .requestCache(cache))
                 .build();
     }
     @Bean
