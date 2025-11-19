@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthControllerV1 {
     private final AuthService authService;
 
-    @PostMapping("/register")
+    @PostMapping("/sign-up")
     public ResponseEntity<ApiResponse<?>> registerUser(@RequestBody @Valid final SignUpRequest signUpRequest) {
         ApiResponse<?> apiResponse = authService.registerUser(signUpRequest);
         if(!apiResponse.success()) {
