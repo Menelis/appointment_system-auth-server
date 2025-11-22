@@ -1,13 +1,16 @@
 package co.appointment.config;
 
 import co.appointment.cache.CustomRequestCache;
+import co.appointment.mixin.UserDetailsImplMixin;
 import co.appointment.shared.model.CorsSettings;
+import co.appointment.shared.security.UserDetailsImpl;
 import co.appointment.token.OAuth2PublicClientRefreshTokenGenerator;
 import co.appointment.token.Oauth2AccessTokenCustomizer;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -19,6 +22,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.OAuth2Token;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -27,6 +31,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
@@ -38,13 +43,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 
+
+import java.util.List;
+
 import static org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer.authorizationServer;
 
 
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
-@Slf4j
 public class SecurityConfig {
 
    private final AppConfigProperties appConfigProperties;
@@ -55,8 +62,18 @@ public class SecurityConfig {
     }
     @Bean
     public OAuth2AuthorizationService authorizationService(final RegisteredClientRepository registeredClientRepository,
-                                                           final JdbcTemplate jdbcTemplate) {
-        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+                                                           final JdbcTemplate jdbcTemplate,
+                                                           final ObjectMapper objectMapper) {
+        JdbcOAuth2AuthorizationService authorizationService = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+        JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
+        ClassLoader classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
+        List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
+        objectMapper.registerModules(securityModules);
+        objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+        objectMapper.addMixIn(UserDetailsImpl.class, UserDetailsImplMixin.class);
+        rowMapper.setObjectMapper(objectMapper);
+        authorizationService.setAuthorizationRowMapper(rowMapper);
+        return authorizationService;
     }
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
