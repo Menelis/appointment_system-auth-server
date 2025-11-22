@@ -5,19 +5,19 @@ import co.appointment.shared.security.UserDetailsImpl;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class UserDetailImplUtils {
     public static UserDetailsImpl build(final User user) {
-        List<GrantedAuthority> authorities = user.getUserRoles()
+        Set<GrantedAuthority> authorities = user.getUserRoles()
                 .stream()
                 .map(role -> new SimpleGrantedAuthority(String.format("ROLE_%s",
                         role.
                                 getRole()
                                 .getName()
                                 .toUpperCase())))
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
         return new UserDetailsImpl(
                 user.getId(),
                 user.getFirstName(),
