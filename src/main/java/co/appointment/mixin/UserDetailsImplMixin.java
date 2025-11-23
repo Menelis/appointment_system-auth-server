@@ -1,6 +1,7 @@
 package co.appointment.mixin;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -18,4 +19,19 @@ public abstract class UserDetailsImplMixin {
             @JsonProperty("contactNo") final String contactNo,
             @JsonProperty("password") final String password,
             @JsonProperty("authorities") final Collection<? extends GrantedAuthority> authorities) {}
+
+    @JsonIgnore
+    public abstract String getUsername();
+
+    @JsonIgnore
+    public abstract boolean isEnabled();
+
+    @JsonIgnore
+    public abstract boolean isAccountNonExpired();
+
+    @JsonIgnore
+    public abstract boolean isAccountNonLocked();
+
+    @JsonIgnore
+    public abstract boolean isCredentialsNonExpired();
 }
