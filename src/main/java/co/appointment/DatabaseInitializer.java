@@ -70,8 +70,15 @@ public class DatabaseInitializer implements CommandLineRunner {
         if(!StringUtils.hasText(client.getClientId())) {
             throw new IllegalArgumentException("Client Id is required");
         }
+        String forClientIdMessage = String.format("%s for client %s", client.getClientId(), client.getClientSecret());
         if(client.getClientAuthenticationMethods().isEmpty()) {
-            throw new IllegalArgumentException("At least one client authentication method is required");
+            throw new IllegalArgumentException(String.format(forClientIdMessage, "At least one client authentication method is required"));
+        }
+        if(client.getAuthorizationGrantTypes().isEmpty()) {
+            throw new IllegalArgumentException(String.format(forClientIdMessage, "At least one authorization grant type is required"));
+        }
+        if(client.getRedirectUris().isEmpty()) {
+            throw new IllegalArgumentException(String.format(forClientIdMessage, "At least one redirect URI is required"));
         }
         if(StringUtils.hasText(client.getClientSecret())) {
             registeredClient.clientSecret(passwordEncoder.encode(client.getClientSecret()));
@@ -92,14 +99,18 @@ public class DatabaseInitializer implements CommandLineRunner {
                 .postLogoutRedirectUris(postLogOutRedirectUris -> postLogOutRedirectUris
                         .addAll(client.getPostLogoutRedirectUris()))
                 .scopes(scopes -> scopes
-                        .addAll(client.getScopes()))
-                .clientSettings(ClientSettings.builder()
-                        .requireProofKey(client.getClientSettings().isRequireProofOfKey())
-                        .build())
-                .tokenSettings(TokenSettings.builder()
-                        .accessTokenTimeToLive(Duration.ofHours(client.getTokenSetting().getAccessTokenTimeToLive()))
-                        .refreshTokenTimeToLive(Duration.ofHours(client.getTokenSetting().getRefreshTokenTimeToLive()))
-                        .build());
+                        .addAll(client.getScopes()));
+        if(client.getClientSettings() != null) {
+            registeredClient.clientSettings(ClientSettings.builder()
+                    .requireProofKey(client.getClientSettings().isRequireProofOfKey())
+                    .build());
+        }
+        if(client.getTokenSetting() != null) {
+            registeredClient.tokenSettings(TokenSettings.builder()
+                    .accessTokenTimeToLive(Duration.ofMinutes(client.getTokenSetting().getAccessTokenTimeToLive()))
+                    .refreshTokenTimeToLive(Duration.ofDays(client.getTokenSetting().getRefreshTokenTimeToLive()))
+                    .build());
+        }
         return registeredClient.build();
     }
 }
