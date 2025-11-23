@@ -1,6 +1,7 @@
 package co.appointment.config;
 
 import co.appointment.cache.CustomRequestCache;
+import co.appointment.mixin.UUIDMixin;
 import co.appointment.mixin.UserDetailsImplMixin;
 import co.appointment.shared.model.CorsSettings;
 import co.appointment.shared.security.UserDetailsImpl;
@@ -60,17 +61,19 @@ public class SecurityConfig {
     public RegisteredClientRepository registeredClientRepository(final JdbcTemplate jdbcTemplate) {
         return new JdbcRegisteredClientRepository(jdbcTemplate);
     }
+
     @Bean
     public OAuth2AuthorizationService authorizationService(final RegisteredClientRepository registeredClientRepository,
-                                                           final JdbcTemplate jdbcTemplate,
-                                                           final ObjectMapper objectMapper) {
+                                                           final JdbcTemplate jdbcTemplate) {
         JdbcOAuth2AuthorizationService authorizationService = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
         JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
         ClassLoader classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
         List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
+        ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModules(securityModules);
         objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
         objectMapper.addMixIn(UserDetailsImpl.class, UserDetailsImplMixin.class);
+        objectMapper.addMixIn(java.util.UUID.class, UUIDMixin.class);
         rowMapper.setObjectMapper(objectMapper);
         authorizationService.setAuthorizationRowMapper(rowMapper);
         return authorizationService;
@@ -81,8 +84,8 @@ public class SecurityConfig {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = authorizationServer();
         return http
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers(appConfigProperties.getCustomExposedEndpoints()) // OAuth 2.0 and OpenID Connect protocol endpoints exposed by the Authorization Server.
-                        .ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher())) // Custom endpoints
+                .csrf(csrf -> csrf.ignoringRequestMatchers(appConfigProperties.getCustomExposedEndpoints())  // Custom endpoints
+                        .ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher())) // OAuth 2.0 and OpenID Connect protocol endpoints exposed by the Authorization Server.
                 .securityMatchers(securityMatcher -> securityMatcher
                         .requestMatchers(authorizationServerConfigurer.getEndpointsMatcher()) // OAuth 2.0 and OpenID Connect protocol endpoints exposed by the Authorization Server.
                         .requestMatchers(appConfigProperties.getCustomExposedEndpoints())) // Custom endpoints
