@@ -81,3 +81,6 @@
      - A class library for common functionality between microservices.
      - Any logic that can be used by multiple microservice must be defined in this shared library. For example:
        - [Protobuf](https://protobuf.dev/) messages for communication between services reside on this shared library.
+
+## Diagram architecture
+![Appointment System](https://github.com/Menelis/appointment_system-auth-server/blob/main/diagram_v1.png)
