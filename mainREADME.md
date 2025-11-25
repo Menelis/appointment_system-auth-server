@@ -46,7 +46,7 @@
      - This service is responsible for managing appointments:
        - Scheduling of appointment
        - Managing(confirm and cancellation) appointments
-     - [Appointment Service](https://github.com/Menelis/appointment_system-appointment-service/blob/main/README.md)
+     - [Appointment Service README.md](https://github.com/Menelis/appointment_system-appointment-service/blob/main/README.md)
    - Notification Service
      - This service is responsible for sending out notification via email.
      - It read notification events from [Kafka](https://kafka.apache.org/) that is sent by other services. For example:
