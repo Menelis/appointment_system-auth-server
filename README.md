@@ -66,6 +66,9 @@ springdoc:
     doc-expansion: none
 
 app:
+  email-template:
+    verify-email-template: Hi %s,<br/><br/> Welcome to Appointment System.To complete registration process click <a href='%s'>here</a> to verify your account.<br/></br/><br/><br/> %s
+    reset-password-email-template: Hi %s,<br/><br/> We have received your request to reset your password.Please click <a href='%s'>here</a> to reset your password.<br/></br/><br/> %s
   cors:
     allowed-origins:
       - http://ui:4200

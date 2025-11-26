@@ -20,6 +20,7 @@ public class AppConfigProperties {
     private KafkaSettings kafka;
     private VerificationTokenSettings verificationToken;
     private String clientUrl;
+    private EmailTemplateSetting emailTemplate;
 
 
     @Data
@@ -51,5 +52,10 @@ public class AppConfigProperties {
     public static class TokenSetting {
         private long accessTokenTimeToLive = 120;
         private long refreshTokenTimeToLive = 120;
+    }
+    @Data
+    public static class EmailTemplateSetting {
+        private String verifyEmailTemplate;
+        private String resetPasswordEmailTemplate;
     }
 }

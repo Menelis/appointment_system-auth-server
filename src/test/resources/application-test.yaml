@@ -18,55 +18,62 @@ spring:
         format_sql: true
 
 app:
-  registered-client:
-    client-id: gateway-client
-    client-secret: 8adLFE4RHIqYOXhB7ZLjgqdRJWAioTMzlblC8XyKrc8=
-    client-uri: http://localhost:9001
-  jwt:
-    expiration-ms: 7200000 # 2 hours
-    secret: ""
-  kafka:
-    notification-topic: appointment-system-notifications-test
-  client-url: http://localhost:4200
-  verification-token:
-    expiration-ms: 86400000 # 24 hours
-  encryption-key: "test"
-  open-api:
-    info:
-      title: Appointment Auth Service - TEST
-      description: Appointment Authentication Service
-      version: 1.0.0
+  email-template:
+    verify-email-template: Hi %s,<br/><br/> Welcome to Appointment System.To complete registration process click <a href='%s'>here</a> to verify your account.<br/></br/><br/><br/> %s
+    reset-password-email-template: Hi %s,<br/><br/> We have received your request to reset your password.Please click <a href='%s'>here</a> to reset your password.<br/></br/><br/> %s
   cors:
     allowed-origins:
-      - "*"
+      - http://localhost:4200
     allowed-methods:
-      - "*"
+      - POST
+      - GET
+      - PUT
+      - OPTIONS
+      - DELETE
+      - PATCH
     allowed-headers:
       - "*"
     max-age: 3600
   white-list:
-    - "*"
-  # Auth Server In Memory Client
-  client:
-    client-id: gatewat-client
-    client-secret: "testSecret"
-    client-url: http://localhost:9000
+    - "/auth-service/v3/api-docs/**"
+    - "/auth-service/swagger-ui/**"
+    - "/api/v1/auth/**"
+  custom-exposed-endpoints:
+    - "/api/v1/auth/**"
+  open-api:
+    info:
+      title: Appointment Auth Service
+      description: Appointment Authentication Service
+      version: 1.0.0
+  verification-token:
+    expiration-ms: 86400000
+  kafka:
+    notification-topic: ${infrastructure.ENV}-appointment-notifications
+  encryption-key: "encryption key"
   registered-clients:
     -
-      client-id: test
+      # Public Client for UI
+      client-id: appointment-ui-client
       client-authentication-methods:
         - "none"
       authorization-grant-types:
         - "authorization_code"
+        - "refresh_token"
       redirect-uris:
-        - "http://localhost"
+        - "${app.client-url}/callback"
       post-logout-redirect-uris:
-        - "http://localhost"
+        - "${app.client-url}/account/sign-out"
+      scopes:
+        - "openid"
+        - "profile"
+        - "email"
+      client-settings:
+        require-proof-of-key: true
+      token-setting:
+        access-token-time-to-live: 120 # in minutes
+        refresh-token-time-to-live: 1 # in days
+  client-url: http://localhost:4200
 
-logging:
-  level:
-    root: info
-    org.springframework.security: trace
 
 grpc:
   server:

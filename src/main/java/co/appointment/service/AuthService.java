@@ -9,6 +9,7 @@ import co.appointment.payload.request.PasswordResetRequest;
 import co.appointment.payload.request.SignUpRequest;
 import co.appointment.repository.RoleRepository;
 import co.appointment.repository.UserRepository;
+import co.appointment.shared.constant.EmailConstants;
 import co.appointment.shared.constant.EventTypeConstants;
 import co.appointment.shared.constant.RoleConstants;
 import co.appointment.shared.kafka.event.EmailEvent;
@@ -19,11 +20,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.AbstractMap;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
@@ -34,6 +37,8 @@ public class AuthService {
 
     private static final Map<String, Object> EMAIL_VERIFICATION_EVENT_HEADERS = Map.of(
             EventTypeConstants.EVENT_TYPE, EventTypeConstants.VERIFY_EMAIL_EVENT);
+    private static final Map<String, Object> EMAIL_PASSWORD_RESET_EVENT_HEADERS = Map.of(
+            EventTypeConstants.EVENT_TYPE, EventTypeConstants.PASSWORD_RESET_EVENT);
 
 
     public ApiResponse<?> registerUser(final SignUpRequest signUpRequest) {
@@ -51,16 +56,34 @@ public class AuthService {
         user.addUserRole(customerRole);
         userRepository.save(user);
         // Generate verification token
-        VerificationToken verificationToken = verificationTokenService.createVerificationToken(new VerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN.name()));
-        sendEmailEvent(user, verificationToken);
+        sendEmailEvent(user, createVerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
         return new ApiResponse<>(true, "User registered successfully.Please check your email for account verification.");
     }
-    private void  sendEmailEvent(final User user, final VerificationToken verificationToken) {
-        String mailBody = encryptionService.encryptText(ObjectUtils.getUserRegistrationEmailBody(ObjectUtils.getParameterizedClientUrl(appConfigProperties.getClientUrl(), user.getEmail(), verificationToken.getToken())));
-        notificationEventService.sendEmailEvent(new EmailEvent(user.getEmail(),"Email Verification", mailBody, true), EMAIL_VERIFICATION_EVENT_HEADERS);
+    private void  sendEmailEvent(
+            final User user, final VerificationToken verificationToken, final String emailType) {
+        final String clientUrl = appConfigProperties.getClientUrl();
+
+        final AbstractMap.SimpleImmutableEntry<String, String> emailBodyAndSubject = switch (emailType) {
+            case EmailConstants.VERIFY_EMAIL_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
+                    EmailConstants.VERIFY_EMAIL_SUBJECT, ObjectUtils.getUserRegistrationEmailBody(clientUrl, user, verificationToken, appConfigProperties.getEmailTemplate().getVerifyEmailTemplate()));
+            case EmailConstants.PASSWORD_RESET_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
+                    EmailConstants.PASSWORD_RESET_SUBJECT, ObjectUtils.getPasswordResetEmailBody(clientUrl, verificationToken, user, appConfigProperties.getEmailTemplate().getResetPasswordEmailTemplate()));
+            default -> throw new IllegalStateException("Unexpected value: " + emailType);
+        };
+
+        final String mailBody = encryptionService.encryptText(emailBodyAndSubject.getValue());
+
+        switch (emailType) {
+            case EmailConstants.VERIFY_EMAIL_MAIL -> notificationEventService.sendEmailEvent(new EmailEvent(
+                    user.getEmail(), EmailConstants.VERIFY_EMAIL_SUBJECT, mailBody, true),
+                    EMAIL_VERIFICATION_EVENT_HEADERS);
+            case EmailConstants.PASSWORD_RESET_MAIL -> notificationEventService.sendEmailEvent(
+                    new EmailEvent(user.getEmail(), EmailConstants.PASSWORD_RESET_SUBJECT, mailBody, true),
+                    EMAIL_PASSWORD_RESET_EVENT_HEADERS);
+            default -> throw new IllegalStateException("Unexpected value: " + emailType);
+        }
     }
-    public ApiResponse<?> confirmEmail(final String email,
-                                       final String token) {
+    public ApiResponse<?> confirmEmail(final String email, final String token) {
         VerificationToken verificationToken = verificationTokenService.getVerificationToken(token);
         if(verificationToken == null) {
             return new ApiResponse<>(false, "Invalid verification token");
@@ -70,7 +93,7 @@ public class AuthService {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
         if(verificationTokenService.tokenExpired(verificationToken)) {
-            sendEmailEvent(user, verificationTokenService.createVerificationToken(new VerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN.name())));
+            sendEmailEvent(user, createVerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
             return new ApiResponse<>(false, "The verification token has expired. Please check your email for new registration confirmation.");
         }
         // Confirm email verified
@@ -83,8 +106,16 @@ public class AuthService {
         if(user == null) {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
-        sendEmailEvent(user, verificationTokenService.createVerificationToken(new VerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN.name())));
+        sendEmailEvent(user, createVerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
         return new ApiResponse<>(true, "Password reset email has been sent to your email");
+    }
+    private VerificationToken createVerificationToken(final User user,
+                                                      final ETokenType tokenType) {
+        VerificationToken verificationToken = verificationTokenService.createVerificationToken(new VerificationToken(user, tokenType.name()));
+        if(verificationToken == null) {
+            throw new RuntimeException("Verification Token could not be created for user id: "+ user.getId());
+        }
+        return verificationToken;
     }
 
     public ApiResponse<?> passwordReset(final PasswordResetRequest passwordResetRequest) {
@@ -97,7 +128,7 @@ public class AuthService {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
         if(verificationTokenService.tokenExpired(verificationToken)) {
-            sendEmailEvent(user, verificationTokenService.createVerificationToken(new VerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN.name())));
+            sendEmailEvent(user, createVerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
             return new ApiResponse<>(false, "The password reset token has expired. Please check your email for new password reset.");
         }
         user.setPassword(passwordEncoder.encode(passwordResetRequest.getPassword()));

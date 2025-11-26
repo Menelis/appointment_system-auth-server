@@ -1,5 +1,9 @@
 package co.appointment.util;
 
+import co.appointment.entity.User;
+import co.appointment.entity.VerificationToken;
+import co.appointment.shared.constant.SharedConstants;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -14,15 +18,25 @@ public class ObjectUtils {
         Instant instant = Instant.ofEpochMilli(dateInMilliseconds);
         return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
-    public static String getUserRegistrationEmailBody(final String clientUrl) {
-        return "Hi,<br/><br/>" +
-                String.format("Welcome to Appointment System.To complete registration process click <a href='%s'>here</a> to verify your account.<br/></br/><br/><br/>", clientUrl) +
-                "Kind Regards,<br/>" +
-                "Appointment System Team.";
+    public static String getUserRegistrationEmailBody(final String clientUrl,
+                                                      final User user,
+                                                      final VerificationToken verificationToken,
+                                                      final String emailTemplate) {
+        final String registrationEmailVerificationUrl = String.format(
+                "%s/account/confirm-email?email=%s&token=%s", clientUrl, user.getEmail(), verificationToken.getToken());
+        return String.format(
+                emailTemplate, getUserFullName(user), registrationEmailVerificationUrl, SharedConstants.APPOINTMENT_SYSTEM_EMAIL_FOOTER);
     }
-    public static String getParameterizedClientUrl(final String clientUrl,
-                                                   final String email,
-                                                   final String token) {
-        return String.format("%s?email=%s&token=%s", clientUrl, email, token);
+    public static String getPasswordResetEmailBody(final String clientUrl,
+                                                   final VerificationToken verificationToken,
+                                                   final User user,
+                                                   final String emailTemplate) {
+        final String forgotPasswordUrl = String.format(
+                "%s/account/reset-password?email=%s&token=%s", clientUrl, user.getEmail(), verificationToken.getToken());
+        return String.format(
+                emailTemplate, getUserFullName(user), forgotPasswordUrl, SharedConstants.APPOINTMENT_SYSTEM_EMAIL_FOOTER);
+    }
+    public static String getUserFullName(final User user) {
+        return user.getFirstName() + " " + user.getLastName();
     }
 }
