@@ -8,3 +8,9 @@ management:
       enabled: true
     readinessstate:
       enabled: true
+
+spring:
+  application:
+    name: @project.artifactId@
+  config:
+    import: optional:configserver:http://config-server:8888
