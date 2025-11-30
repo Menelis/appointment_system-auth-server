@@ -12,8 +12,8 @@
 ### Existing public Docker Image
 - There is an already existing public image you can use without building the new one if you not making code changes:
   - Image - ```docker.io/menelismthembu12/appointment-auth-server```
-Tag - ```1.0.4```
-The service allows config to be externalized using config-server.
+  - Tag - ```1.0.4```
+- The service allows config to be externalized using config-server.
 ```yaml
 infrastructure:
   env: dev
