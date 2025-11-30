@@ -81,6 +81,7 @@
      - A class library for common functionality between microservices.
      - Any logic that can be used by multiple microservice must be defined in this shared library. For example:
        - [Protobuf](https://protobuf.dev/) messages for communication between services reside on this shared library.
+     - **If you are not using public images that are referenced on java service, this library must be pushed to artifacts repository in order for java services to include it in build when running workflows.**
 
 ## Diagram architecture
 ![Appointment System](https://github.com/Menelis/appointment_system-auth-server/blob/main/diagram_v1.png)
