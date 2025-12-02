@@ -10,15 +10,15 @@
       - The customer can cancel appointment which includes a reason why the appointment was cancelled.
       - The cancellation can happen any time even if the branch has confirmed the appointment.
 - Branch Admins:
-  - Confirm appointment - The admin confirm
+  - Confirm appointment
     - An email is sent to the customer stating that the appointment has been confirmed.
-  - Cancel/Decline
+  - Cancel
     - Admins can cancel appointments with with the reason that will be sent to the customer on the cancellation notification
 - Notifications
   - Notifications are sent when:
     - The customer makes an appointment.
     - The admin confirms an appointment.
-    - The admin cancels/rejects an appointment
+    - The admin cancels an appointment
 - Appointment statuses:
   - `PENDING CONFIRMATION` - The status when the customer has made an appointment.
   - `CONFIRMED` - The status when the admin has confirmed the appointment.
@@ -29,6 +29,9 @@
    - It makes applications easier to scale and faster to develop
    - Microservices are smaller and independently deployable.
    - It's easier to manage bug fixes and future releases
+ - The following kafka topic must be created in order for the whole appointment flow to work:
+   - Topic: ``{env}-appointment-notifications``
+   - The appointment system uses kafka for any notification that is sent to the customers about their appointments.
  - The appointment system consists of the 4 microservices. Each service manages it's own database.
    - Auth Service
      - This service is responsible for user management.
@@ -82,6 +85,5 @@
      - Any logic that can be used by multiple microservice must be defined in this shared library. For example:
        - [Protobuf](https://protobuf.dev/) messages for communication between services reside on this shared library.
      - **If you are not using public images that are referenced on java service, this library must be pushed to artifacts repository in order for java services to include it in build when running workflows.**
-
 ## Diagram architecture
 ![Appointment System](https://github.com/Menelis/appointment_system-auth-server/blob/main/diagram_v1.png)

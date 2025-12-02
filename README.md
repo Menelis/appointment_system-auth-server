@@ -12,8 +12,18 @@
 ### Existing public Docker Image
 - There is an already existing public image you can use without building the new one if you not making code changes:
   - Image - ```docker.io/menelismthembu12/appointment-auth-server```
-  - Tag - ```1.0.4```
+  - Tag - ```1.0.6```
 - The service allows config to be externalized using config-server.
+  - The seeded admin user for testing if admin can ``CONFIRM`` or ``CANCEL`` appointment. Customers can register via the system
+```json
+{
+  "firstName": "user",
+  "lastName": "admin",
+  "email": "user@admin.com",
+  "contactNo": "1234569875",
+  "password": "useradmin$$$1234"
+}
+```
 ```yaml
 infrastructure:
   env: dev
