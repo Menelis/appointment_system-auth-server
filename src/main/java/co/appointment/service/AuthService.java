@@ -12,7 +12,7 @@ import co.appointment.repository.UserRepository;
 import co.appointment.shared.constant.EmailConstants;
 import co.appointment.shared.constant.EventTypeConstants;
 import co.appointment.shared.constant.RoleConstants;
-import co.appointment.shared.kafka.event.EmailEvent;
+import co.appointment.shared.event.EmailEvent;
 import co.appointment.shared.payload.response.ApiResponse;
 import co.appointment.shared.service.EncryptionService;
 import co.appointment.util.ObjectUtils;
@@ -71,14 +71,15 @@ public class AuthService {
             default -> throw new IllegalStateException("Unexpected value: " + emailType);
         };
 
+        //Encrypt email body and recipientEmail
         final String mailBody = encryptionService.encryptText(emailBodyAndSubject.getValue());
-
+        final String recipientEmail = encryptionService.encryptText(user.getEmail());
         switch (emailType) {
             case EmailConstants.VERIFY_EMAIL_MAIL -> notificationEventService.sendEmailEvent(new EmailEvent(
-                    user.getEmail(), EmailConstants.VERIFY_EMAIL_SUBJECT, mailBody, true),
+                            recipientEmail, EmailConstants.VERIFY_EMAIL_SUBJECT, mailBody, true, true),
                     EMAIL_VERIFICATION_EVENT_HEADERS);
             case EmailConstants.PASSWORD_RESET_MAIL -> notificationEventService.sendEmailEvent(
-                    new EmailEvent(user.getEmail(), EmailConstants.PASSWORD_RESET_SUBJECT, mailBody, true),
+                    new EmailEvent(recipientEmail, EmailConstants.PASSWORD_RESET_SUBJECT, mailBody, true, true),
                     EMAIL_PASSWORD_RESET_EVENT_HEADERS);
             default -> throw new IllegalStateException("Unexpected value: " + emailType);
         }

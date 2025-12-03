@@ -30,7 +30,7 @@
 		<java.version>25</java.version>
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<lombok.version>1.18.42</lombok.version>
-		<appointment-shared.version>1.0.1</appointment-shared.version>
+		<appointment-shared.version>1.0.2</appointment-shared.version>
 		<springdoc-openapi-starter-webmvc-ui.version>2.8.13</springdoc-openapi-starter-webmvc-ui.version>
 		<grpc-server-spring-boot-starter.version>3.1.0.RELEASE</grpc-server-spring-boot-starter.version>
 		<grpc.version>1.76.0</grpc.version>

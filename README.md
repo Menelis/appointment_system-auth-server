@@ -12,7 +12,7 @@
 ### Existing public Docker Image
 - There is an already existing public image you can use without building the new one if you not making code changes:
   - Image - ```docker.io/menelismthembu12/appointment-auth-server```
-  - Tag - ```1.0.6```
+  - Tag - ```1.0.5```
 - The service allows config to be externalized using config-server.
   - The seeded admin user for testing if admin can ``CONFIRM`` or ``CANCEL`` appointment. Customers can register via the system
 ```json
@@ -124,9 +124,9 @@ app:
         - "authorization_code"
         - "refresh_token"
       redirect-uris:
-        - "${app.client-url}/callback"
+        - "http://ui:4200/callback"
       post-logout-redirect-uris:
-        - "${app.client-url}/account/sign-out"
+        - "http://ui:4200/account/sign-out"
       scopes:
         - "openid"
         - "profile"
@@ -136,7 +136,7 @@ app:
       token-setting:
         access-token-time-to-live: 120 # in minutes
         refresh-token-time-to-live: 1 # in days
-  client-url: http://ui:4200
+  client-url: http://ui:4200/# #The hash represent hashLocationStrategy used by angular
 # gRPC Server Config
 grpc:
   server:
