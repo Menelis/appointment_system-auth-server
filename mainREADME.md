@@ -87,3 +87,6 @@
      - **If you are not using public images that are referenced on java service, this library must be pushed to artifacts repository in order for java services to include it in build when running workflows.**
 ## Diagram architecture
 ![Appointment System](https://github.com/Menelis/appointment_system-auth-server/blob/main/diagram_v1.png)
+
+## UI Preview
+![Register and schedule an appointment](https://github.com/Menelis/appointment_system-auth-server/blob/main/Appointment%20-%20UI%20user2%20-%20v2.gif)
