@@ -1,6 +1,7 @@
 package co.appointment.service;
 
 import co.appointment.config.AppConfigProperties;
+import co.appointment.persistence.VerificationTokenEntity;
 import co.appointment.repository.VerificationTokenRepository;
 import co.appointment.util.ObjectUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -16,16 +17,16 @@ public class VerificationTokenService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final AppConfigProperties.VerificationTokenSettings verificationTokenSettings;
 
-    public VerificationTokenService(final VerificationTokenRepository verificationTokenRepository, final AppConfigProperties appConfigProperties) {
-        this.verificationTokenRepository = verificationTokenRepository;
+    public VerificationTokenService(final VerificationTokenRepository tokenRepository, final AppConfigProperties appConfigProperties) {
+        this.verificationTokenRepository = tokenRepository;
         this.verificationTokenSettings = appConfigProperties.getVerificationToken();
     }
-    public VerificationToken createVerificationToken(final VerificationToken verificationToken) {
+    public VerificationTokenEntity createVerificationToken(final VerificationTokenEntity verificationToken) {
         verificationToken.setToken(UUID.randomUUID().toString());
         verificationToken.setExpiryDate(ObjectUtils.addMillisecondsToCurrentDate(verificationTokenSettings.getExpirationMs()).getTime());
-        if (verificationToken.getId() != null) {
-            verificationToken.setCreatedAt(LocalDateTime.now());
-        }
+//        if (verificationToken.getId() != null) {
+//            verificationToken.setCreatedAt(LocalDateTime.now());
+//        }
         return verificationTokenRepository.save(verificationToken);
     }
     public VerificationToken getVerificationToken(final String token) {
