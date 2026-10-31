@@ -1,11 +1,9 @@
 package co.appointment.service;
 
-import co.appointment.entity.User;
 import co.appointment.grpc.AuthServiceGrpc;
 import co.appointment.grpc.GetUserByEmailRequest;
 import co.appointment.grpc.GetUserByIdRequest;
 import co.appointment.grpc.GetUserResponse;
-import co.appointment.repository.UserRepository;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.server.service.GrpcService;

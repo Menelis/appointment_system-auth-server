@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.7</version>
+		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>co.appointment</groupId>
@@ -13,33 +13,17 @@
 	<version>1.0.5</version>
 	<name>auth-server</name>
 	<description>Appointment Booking System Auth Server</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
 	<properties>
 		<java.version>25</java.version>
-		<spring-cloud.version>2025.0.0</spring-cloud.version>
-		<lombok.version>1.18.42</lombok.version>
-		<appointment-shared.version>1.0.2</appointment-shared.version>
-		<springdoc-openapi-starter-webmvc-ui.version>2.8.13</springdoc-openapi-starter-webmvc-ui.version>
-		<grpc-server-spring-boot-starter.version>3.1.0.RELEASE</grpc-server-spring-boot-starter.version>
-		<grpc.version>1.76.0</grpc.version>
-		<flyway-core.version>11.17.0</flyway-core.version>
+		<spring-cloud.version>2025.1.2</spring-cloud.version>
+		<appointment-system-shared.version>1.0.0</appointment-system-shared.version>
+		<springdoc-openapi-starter-webmvc-ui.version>3.2.0</springdoc-openapi-starter-webmvc-ui.version>
+		<code-format.version>1.0.0</code-format.version>
 	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
+			<artifactId>spring-boot-starter-data-jdbc</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -63,22 +47,22 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
-			<version>${spring-kafka.version}</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-kafka</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc-openapi-starter-webmvc-ui.version}</version>
 		</dependency>
+		<!--Custom Shared Library-->
 		<dependency>
 			<groupId>co.appointment.shared</groupId>
-			<artifactId>appointment-shared</artifactId>
-			<version>${appointment-shared.version}</version>
+			<artifactId>appointment-system-shared</artifactId>
+			<version>${appointment-system-shared.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -105,32 +89,17 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>net.devh</groupId>
-			<artifactId>grpc-server-spring-boot-starter</artifactId>
-			<version>${grpc-server-spring-boot-starter.version}</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-grpc-server</artifactId>
 		</dependency>
-		<!--Flyway dependency for db migrations-->
+		<!--Fly way dependencies-->
 		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-			<version>${flyway-core.version}</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
-			<version>${flyway-core.version}</version>
-		</dependency>
-		<!-- Grpc -->
-		<dependency>
-			<groupId>io.grpc</groupId>
-			<artifactId>grpc-api</artifactId>
-			<version>${grpc.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.grpc</groupId>
-			<artifactId>grpc-services</artifactId>
-			<version>${grpc.version}</version>
-			<scope>runtime</scope>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>
@@ -150,13 +119,16 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.14.1</version>
 				<configuration>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
 							<version>${lombok.version}</version>
+						</path>
+						<path>
+							<groupId>org.springframework.boot</groupId>
+							<artifactId>spring-boot-configuration-processor</artifactId>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
@@ -172,6 +144,63 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.6.0</version>
+				<configuration>
+					<configLocation>custom_check_style.xml</configLocation>
+					<consoleOutput>true</consoleOutput>
+					<failsOnError>true</failsOnError>
+					<includeTestSourceDirectory>true</includeTestSourceDirectory>
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>za.co</groupId>
+						<artifactId>code-format</artifactId>
+						<version>${code-format.version}</version>
+					</dependency>
+				</dependencies>
+				<executions>
+					<execution>
+						<id>validate</id>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<phase>validate</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>3.10.4</version>
+				<configuration>
+					<java>
+						<removeUnusedImports/>
+						<trimTrailingWhitespace/>
+						<endWithNewline/>
+						<palantirJavaFormat>
+							<version>2.102.0</version>
+						</palantirJavaFormat>
+						<importOrder/>
+					</java>
+					<pom>
+						<sortPom>
+							<expandEmptyElements>false</expandEmptyElements>
+							<nrOfIndentSpace>4</nrOfIndentSpace>
+						</sortPom>
+					</pom>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>apply</goal>
+						</goals>
+						<phase>validate</phase>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

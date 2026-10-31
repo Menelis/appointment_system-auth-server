@@ -1,7 +1,5 @@
 package co.appointment.security.service;
 
-import co.appointment.entity.User;
-import co.appointment.repository.UserRepository;
 import co.appointment.util.UserDetailImplUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

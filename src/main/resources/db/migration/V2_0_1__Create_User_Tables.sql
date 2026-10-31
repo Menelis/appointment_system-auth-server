@@ -1,0 +1,47 @@
+CREATE TABLE roles
+(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    name VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE users
+(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    contact_no VARCHAR(20),
+    password VARCHAR(100) NOT NULL,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE(email)
+);
+
+CREATE TABLE user_roles
+(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    user_id UUID REFERENCES users(id) NOT NULL,
+    role_id UUID REFERENCES roles(id) NOT NULL,
+    UNIQUE(user_id, role_id)
+);
+
+CREATE TABLE verification_tokens
+(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version BIGINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    verification_token VARCHAR(100) NOT NULL,
+    user_id UUID REFERENCES users(id) NOT NULL,
+    expiry_date BIGINT NOT NULL,
+    token_type VARCHAR(100) NOT NULL
+);

@@ -1,7 +1,5 @@
 package co.appointment.util;
 
-import co.appointment.entity.User;
-import co.appointment.entity.VerificationToken;
 import co.appointment.shared.constant.SharedConstants;
 
 import java.time.Instant;
@@ -9,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
+@SuppressWarnings({ "HideUtilityClassConstructor" })
 public class ObjectUtils {
     public static Date addMillisecondsToCurrentDate(final int expiryTimeInMills) {
         Date now = new Date();

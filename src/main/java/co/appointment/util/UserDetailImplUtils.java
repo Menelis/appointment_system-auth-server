@@ -1,6 +1,5 @@
 package co.appointment.util;
 
-import co.appointment.entity.User;
 import co.appointment.shared.security.UserDetailsImpl;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -8,6 +7,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({ "HideUtilityClassConstructor" })
 public class UserDetailImplUtils {
     public static UserDetailsImpl build(final User user) {
         Set<GrantedAuthority> authorities = user.getUserRoles()

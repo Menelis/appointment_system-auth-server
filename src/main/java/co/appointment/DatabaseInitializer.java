@@ -1,12 +1,7 @@
 package co.appointment;
 
 import co.appointment.config.AppConfigProperties;
-import co.appointment.entity.Role;
-import co.appointment.entity.User;
-import co.appointment.entity.UserRole;
-import co.appointment.entity.UserRoleKey;
 import co.appointment.repository.RoleRepository;
-import co.appointment.repository.UserRepository;
 import co.appointment.shared.constant.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -79,7 +74,7 @@ public class DatabaseInitializer implements CommandLineRunner {
     private void seedRoles() {
         Set<String> roles = Set.of(
                 RoleConstants.ADMIN_ROLE,
-                RoleConstants.USER_ROLE,
+                RoleConstants.TELLER_ROLE,
                 RoleConstants.CUSTOMER_ROLE);
         roles.forEach(role -> {
             Optional<Role> dbRole = getRoleByName(role);

@@ -13,13 +13,15 @@ import java.net.URISyntaxException;
 import java.util.List;
 
 /**
- * Helpful <a href="https://medium.com/@kasunharitha55/unlocking-secure-authentication-building-an-oauth2-flow-with-spring-boot-angular-pkce-167bae9a26df">blog</a> on overcoming common pitfalls
+ * Helpful <a href="https://medium.com/@kasunharitha55/unlocking-secure-authentication-building-an-oauth2-flow-with-spring-boot-angular-pkce-167bae9a26df">blog</a> on overcoming common pitfalls.
  */
 @Component
 @Slf4j
 public class CustomRequestCache extends HttpSessionRequestCache {
 
-    //Overcoming Common Pitfalls
+    /*
+     * Overcoming Common Pitfalls.
+     */
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final List<String> ignoredPatterns = List.of(
             "/.well-known/appspecific/**",
@@ -29,10 +31,15 @@ public class CustomRequestCache extends HttpSessionRequestCache {
             "/favicon.ico*",
             "/assets*"
     );
-    // Helper to check if a URI matches any of our ignored patterns
+
+    /**
+     * Helper to check if a URI matches any of our ignored patterns.
+     * @param uri url
+     * @return boolean
+     */
     private boolean matchesIgnoredPattern(final String uri) {
-        for(String pattern : ignoredPatterns) {
-            if(pathMatcher.match(pattern, uri)) {
+        for (String pattern : ignoredPatterns) {
+            if (pathMatcher.match(pattern, uri)) {
                 return true;
             }
         }
@@ -40,7 +47,9 @@ public class CustomRequestCache extends HttpSessionRequestCache {
     }
 
     @Override
-    public void saveRequest(HttpServletRequest request, HttpServletResponse response) {
+    public void saveRequest(
+            final HttpServletRequest request,
+            final HttpServletResponse response) {
         String requestURI =  request.getRequestURI();
         //If the request URI matches an ignored pattern, don't save it!
         if(matchesIgnoredPattern(requestURI)) {
@@ -50,7 +59,9 @@ public class CustomRequestCache extends HttpSessionRequestCache {
     }
 
     @Override
-    public SavedRequest getRequest(HttpServletRequest currentRequest, HttpServletResponse response) {
+    public SavedRequest getRequest(
+            final HttpServletRequest currentRequest,
+            final HttpServletResponse response) {
         SavedRequest savedRequest =  super.getRequest(currentRequest, response);
         if(savedRequest != null) {
             try {

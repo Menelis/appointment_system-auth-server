@@ -1,22 +1,22 @@
 package co.appointment.service;
 
 import co.appointment.config.AppConfigProperties;
-import co.appointment.entity.ETokenType;
-import co.appointment.entity.Role;
-import co.appointment.entity.User;
-import co.appointment.entity.VerificationToken;
+import co.appointment.enums.TokenType;
 import co.appointment.payload.request.PasswordResetRequest;
 import co.appointment.payload.request.SignUpRequest;
 import co.appointment.repository.RoleRepository;
-import co.appointment.repository.UserRepository;
 import co.appointment.shared.constant.EmailConstants;
 import co.appointment.shared.constant.EventTypeConstants;
 import co.appointment.shared.constant.RoleConstants;
+import co.appointment.shared.dto.ServiceResponseDto;
 import co.appointment.shared.event.EmailEvent;
+import co.appointment.shared.exception.ServiceException;
+import co.appointment.shared.infastructure.KafkaPublisher;
 import co.appointment.shared.payload.response.ApiResponse;
 import co.appointment.shared.service.EncryptionService;
 import co.appointment.util.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,9 +30,11 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
-    private final NotificationEventService notificationEventService;
     private final AppConfigProperties appConfigProperties;
     private final VerificationTokenService verificationTokenService;
+    private final KafkaPublisher kafkaPublisher;
+    
+    private final NotificationEventService notificationEventService;
     private final EncryptionService encryptionService;
 
     private static final Map<String, Object> EMAIL_VERIFICATION_EVENT_HEADERS = Map.of(
@@ -41,9 +43,11 @@ public class AuthService {
             EventTypeConstants.EVENT_TYPE, EventTypeConstants.PASSWORD_RESET_EVENT);
 
 
-    public ApiResponse<?> registerUser(final SignUpRequest signUpRequest) {
+    public ServiceResponseDto registerUser(final SignUpRequest signUpRequest) {
         if(userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return new ApiResponse<>(false, String.format("Email %s is already in use", signUpRequest.getEmail()));
+            throw new ServiceException(HttpStatus.CONFLICT, ServiceResponseDto.builder()
+                    .errorDescription("Email %s is already in use".formatted(signUpRequest.getEmail()))
+                    .build());
         }
         User user = new User(
                 signUpRequest.getFirstName(),
@@ -56,12 +60,13 @@ public class AuthService {
         user.addUserRole(customerRole);
         userRepository.save(user);
         // Generate verification token
-        sendEmailEvent(user, createVerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
+        sendEmailEvent(user, createVerificationToken(user, TokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
         return new ApiResponse<>(true, "User registered successfully.Please check your email for account verification.");
     }
     private void  sendEmailEvent(
             final User user, final VerificationToken verificationToken, final String emailType) {
         final String clientUrl = appConfigProperties.getClientUrl();
+
 
         final AbstractMap.SimpleImmutableEntry<String, String> emailBodyAndSubject = switch (emailType) {
             case EmailConstants.VERIFY_EMAIL_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
@@ -94,7 +99,7 @@ public class AuthService {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
         if(verificationTokenService.tokenExpired(verificationToken)) {
-            sendEmailEvent(user, createVerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
+            sendEmailEvent(user, createVerificationToken(user, TokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
             return new ApiResponse<>(false, "The verification token has expired. Please check your email for new registration confirmation.");
         }
         // Confirm email verified
@@ -107,11 +112,11 @@ public class AuthService {
         if(user == null) {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
-        sendEmailEvent(user, createVerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
+        sendEmailEvent(user, createVerificationToken(user, TokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
         return new ApiResponse<>(true, "Password reset email has been sent to your email");
     }
     private VerificationToken createVerificationToken(final User user,
-                                                      final ETokenType tokenType) {
+                                                      final TokenType tokenType) {
         VerificationToken verificationToken = verificationTokenService.createVerificationToken(new VerificationToken(user, tokenType.name()));
         if(verificationToken == null) {
             throw new RuntimeException("Verification Token could not be created for user id: "+ user.getId());
@@ -129,7 +134,7 @@ public class AuthService {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
         if(verificationTokenService.tokenExpired(verificationToken)) {
-            sendEmailEvent(user, createVerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
+            sendEmailEvent(user, createVerificationToken(user, TokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
             return new ApiResponse<>(false, "The password reset token has expired. Please check your email for new password reset.");
         }
         user.setPassword(passwordEncoder.encode(passwordResetRequest.getPassword()));

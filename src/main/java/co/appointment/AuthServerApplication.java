@@ -7,10 +7,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ AppConfigProperties.class })
+@SuppressWarnings({ "HideUtilityClassConstructor" })
 public class AuthServerApplication {
-
-	public static void main(String[] args) {
+	static void main(final String[] args) {
 		SpringApplication.run(AuthServerApplication.class, args);
 	}
-
 }

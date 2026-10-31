@@ -18,7 +18,7 @@ public class OAuth2PublicClientRefreshTokenGenerator implements OAuth2TokenGener
     @Nullable
     @Override
     public OAuth2RefreshToken generate(final OAuth2TokenContext context) {
-        if(!OAuth2TokenType.REFRESH_TOKEN.equals(context.getTokenType())) {
+        if (!OAuth2TokenType.REFRESH_TOKEN.equals(context.getTokenType())) {
             return null;
         }
 

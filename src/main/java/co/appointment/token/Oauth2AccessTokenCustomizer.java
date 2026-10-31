@@ -17,13 +17,13 @@ public class Oauth2AccessTokenCustomizer implements OAuth2TokenCustomizer<JwtEnc
 
     @Override
     public void customize(final JwtEncodingContext context) {
-        if(OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+        if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
             context.getClaims().claims(claims -> {
                 Object principal = context.getPrincipal().getPrincipal();
-                if(principal == null) {
+                if (principal == null) {
                     return;
                 }
-                UserDetailsImpl user = (UserDetailsImpl)principal;
+                UserDetailsImpl user = (UserDetailsImpl) principal;
 
                 Set<String> roles = AuthorityUtils.authorityListToSet(
                         user.getAuthorities())

@@ -3,7 +3,6 @@ package co.appointment.config;
 import co.appointment.shared.model.CorsSettings;
 import co.appointment.shared.model.OpenApiSettings;
 import lombok.Data;
-import org.hibernate.sql.ast.tree.expression.Collation;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.*;
