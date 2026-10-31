@@ -15,8 +15,8 @@ public class NotificationEventService {
     private final KafkaTemplate<String, EmailEvent> kafkaTemplate;
     private final String notificationTopic;
 
-    public NotificationEventService(final KafkaTemplate<String, EmailEvent> kafkaTemplate, final AppConfigProperties appConfigProperties) {
-        this.kafkaTemplate = kafkaTemplate;
+    public NotificationEventService(final KafkaTemplate<String, EmailEvent> template, final AppConfigProperties appConfigProperties) {
+        this.kafkaTemplate = template;
         this.notificationTopic = appConfigProperties.getKafka().getNotificationTopic();
     }
     public void sendEmailEvent(final EmailEvent emailEvent,

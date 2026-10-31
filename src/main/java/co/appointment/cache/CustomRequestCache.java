@@ -38,7 +38,7 @@ public class CustomRequestCache extends HttpSessionRequestCache {
      * @return boolean
      */
     private boolean matchesIgnoredPattern(final String uri) {
-        for (String pattern : ignoredPatterns) {
+        for (final String pattern : ignoredPatterns) {
             if (pathMatcher.match(pattern, uri)) {
                 return true;
             }
@@ -52,7 +52,7 @@ public class CustomRequestCache extends HttpSessionRequestCache {
             final HttpServletResponse response) {
         String requestURI =  request.getRequestURI();
         //If the request URI matches an ignored pattern, don't save it!
-        if(matchesIgnoredPattern(requestURI)) {
+        if (matchesIgnoredPattern(requestURI)) {
             return;
         }
         super.saveRequest(request, response);
@@ -63,7 +63,7 @@ public class CustomRequestCache extends HttpSessionRequestCache {
             final HttpServletRequest currentRequest,
             final HttpServletResponse response) {
         SavedRequest savedRequest =  super.getRequest(currentRequest, response);
-        if(savedRequest != null) {
+        if (savedRequest != null) {
             try {
                 String fullUrl = savedRequest.getRedirectUrl();
                 URI uri = new URI(fullUrl);
@@ -71,7 +71,7 @@ public class CustomRequestCache extends HttpSessionRequestCache {
 
                 // If the saved request path matches an ignored pattern, remove it from the cache
                 // and return null, effectively ignoring it.
-                if(matchesIgnoredPattern(savedRequestPath)) {
+                if (matchesIgnoredPattern(savedRequestPath)) {
                     removeRequest(currentRequest, response);
                     return null;
                 }

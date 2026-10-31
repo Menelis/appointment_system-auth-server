@@ -4,7 +4,10 @@ import co.appointment.config.AppConfigProperties;
 import co.appointment.enums.TokenType;
 import co.appointment.payload.request.PasswordResetRequest;
 import co.appointment.payload.request.SignUpRequest;
-import co.appointment.repository.RoleRepository;
+import co.appointment.persistence.RoleEntity;
+import co.appointment.persistence.RoleRepository;
+import co.appointment.persistence.UserEntity;
+import co.appointment.persistence.UserRepository;
 import co.appointment.shared.constant.EmailConstants;
 import co.appointment.shared.constant.EventTypeConstants;
 import co.appointment.shared.constant.RoleConstants;
@@ -44,19 +47,21 @@ public class AuthService {
 
 
     public ServiceResponseDto registerUser(final SignUpRequest signUpRequest) {
-        if(userRepository.existsByEmail(signUpRequest.getEmail())) {
+        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             throw new ServiceException(HttpStatus.CONFLICT, ServiceResponseDto.builder()
                     .errorDescription("Email %s is already in use".formatted(signUpRequest.getEmail()))
                     .build());
         }
-        User user = new User(
-                signUpRequest.getFirstName(),
-                signUpRequest.getLastName(),
-                signUpRequest.getEmail(),
-                signUpRequest.getContactNo(),
-                passwordEncoder.encode(signUpRequest.getPassword()));
+        UserEntity user = UserEntity.builder()
+                .firstName(signUpRequest.getFirstName())
+                .lastName(signUpRequest.getLastName())
+                .email(signUpRequest.getEmail())
+                .contactNo(signUpRequest.getContactNo())
+                .password(passwordEncoder.encode(signUpRequest.getPassword()))
+                .build();
         //Set default role
-        Role customerRole = roleRepository.findByName(RoleConstants.CUSTOMER_ROLE).orElseThrow(() -> new RuntimeException(String.format("No role with name: %s was found in the db", RoleConstants.CUSTOMER_ROLE)));
+        RoleEntity customerRole = roleRepository.findByName(RoleConstants.CUSTOMER_ROLE)
+                .orElseThrow(() -> new RuntimeException(String.format("No role with name: %s was found in the db", RoleConstants.CUSTOMER_ROLE)));
         user.addUserRole(customerRole);
         userRepository.save(user);
         // Generate verification token
@@ -72,7 +77,12 @@ public class AuthService {
             case EmailConstants.VERIFY_EMAIL_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
                     EmailConstants.VERIFY_EMAIL_SUBJECT, ObjectUtils.getUserRegistrationEmailBody(clientUrl, user, verificationToken, appConfigProperties.getEmailTemplate().getVerifyEmailTemplate()));
             case EmailConstants.PASSWORD_RESET_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
-                    EmailConstants.PASSWORD_RESET_SUBJECT, ObjectUtils.getPasswordResetEmailBody(clientUrl, verificationToken, user, appConfigProperties.getEmailTemplate().getResetPasswordEmailTemplate()));
+                    EmailConstants.PASSWORD_RESET_SUBJECT,
+                    ObjectUtils.getPasswordResetEmailBody(
+                            clientUrl,
+                            verificationToken,
+                            user,
+                            appConfigProperties.getEmailTemplate().getResetPasswordEmailTemplate()));
             default -> throw new IllegalStateException("Unexpected value: " + emailType);
         };
 
@@ -91,14 +101,14 @@ public class AuthService {
     }
     public ApiResponse<?> confirmEmail(final String email, final String token) {
         VerificationToken verificationToken = verificationTokenService.getVerificationToken(token);
-        if(verificationToken == null) {
+        if (verificationToken == null) {
             return new ApiResponse<>(false, "Invalid verification token");
         }
         User user = userRepository.findByEmail(email).orElse(null);
-        if(user == null) {
+        if (user == null) {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
-        if(verificationTokenService.tokenExpired(verificationToken)) {
+        if (verificationTokenService.tokenExpired(verificationToken)) {
             sendEmailEvent(user, createVerificationToken(user, TokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
             return new ApiResponse<>(false, "The verification token has expired. Please check your email for new registration confirmation.");
         }
@@ -109,7 +119,7 @@ public class AuthService {
     }
     public ApiResponse<?> forgotPassword(final String email) {
         User user = userRepository.findByEmail(email).orElse(null);
-        if(user == null) {
+        if (user == null) {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
         sendEmailEvent(user, createVerificationToken(user, TokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
@@ -118,7 +128,7 @@ public class AuthService {
     private VerificationToken createVerificationToken(final User user,
                                                       final TokenType tokenType) {
         VerificationToken verificationToken = verificationTokenService.createVerificationToken(new VerificationToken(user, tokenType.name()));
-        if(verificationToken == null) {
+        if (verificationToken == null) {
             throw new RuntimeException("Verification Token could not be created for user id: "+ user.getId());
         }
         return verificationToken;
@@ -126,14 +136,14 @@ public class AuthService {
 
     public ApiResponse<?> passwordReset(final PasswordResetRequest passwordResetRequest) {
         VerificationToken verificationToken = verificationTokenService.getVerificationToken(passwordResetRequest.getToken());
-        if(verificationToken == null) {
+        if (verificationToken == null) {
             return new ApiResponse<>(false, "Invalid verification token");
         }
         User user = userRepository.findByEmail(passwordResetRequest.getEmail()).orElse(null);
-        if(user == null) {
+        if (user == null) {
             return new ApiResponse<>(false, "No user was found with the supplied email");
         }
-        if(verificationTokenService.tokenExpired(verificationToken)) {
+        if (verificationTokenService.tokenExpired(verificationToken)) {
             sendEmailEvent(user, createVerificationToken(user, TokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
             return new ApiResponse<>(false, "The password reset token has expired. Please check your email for new password reset.");
         }

@@ -23,7 +23,7 @@ public class AuthControllerV1 {
     @PostMapping("/sign-up")
     public ResponseEntity<ApiResponse<?>> registerUser(@RequestBody @Valid final SignUpRequest signUpRequest) {
         ApiResponse<?> apiResponse = authService.registerUser(signUpRequest);
-        if(!apiResponse.success()) {
+        if (!apiResponse.success()) {
             return ResponseEntity.badRequest().body(apiResponse);
         }
         return ResponseEntity.ok(apiResponse);
@@ -32,7 +32,7 @@ public class AuthControllerV1 {
     public ResponseEntity<?> emailConfirmation(@RequestParam(name = "token") final String token,
                                                @RequestParam(name = "email") final String email) {
         ApiResponse<?> apiResponse = authService.confirmEmail(email, token);
-        if(!apiResponse.success()) {
+        if (!apiResponse.success()) {
             return ResponseEntity.badRequest().body(apiResponse);
         }
         return ResponseEntity.ok().body(apiResponse);
@@ -40,7 +40,7 @@ public class AuthControllerV1 {
     @GetMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestParam(name = "email") final String email) {
         ApiResponse<?> response = authService.forgotPassword(email);
-        if(!response.success()) {
+        if (!response.success()) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok().body(response);
@@ -48,7 +48,7 @@ public class AuthControllerV1 {
     @PostMapping("/password-reset")
     public ResponseEntity<?> passwordReset(@RequestBody @Valid final PasswordResetRequest passwordResetRequest) {
         ApiResponse<?> response = authService.passwordReset(passwordResetRequest);
-        if(!response.success()) {
+        if (!response.success()) {
             return ResponseEntity.badRequest().body(response);
         }
         return ResponseEntity.ok().body(response);

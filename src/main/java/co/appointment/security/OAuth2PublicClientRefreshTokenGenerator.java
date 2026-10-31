@@ -17,7 +17,7 @@ public class OAuth2PublicClientRefreshTokenGenerator implements OAuth2TokenGener
 
     @Nullable
     @Override
-    public OAuth2RefreshToken generate(OAuth2TokenContext context) {
+    public OAuth2RefreshToken generate(final OAuth2TokenContext context) {
         return null;
     }
 }

@@ -6,7 +6,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 public class KafkaProducerService extends AbstractKafkaPublisher {
 
-    public KafkaProducerService(KafkaTemplate<String, byte[]> kafkaTemplate, JsonMapper jsonMapper) {
+    public KafkaProducerService(
+            final KafkaTemplate<String, byte[]> kafkaTemplate,
+            final JsonMapper jsonMapper) {
         super(kafkaTemplate, jsonMapper);
     }
 }

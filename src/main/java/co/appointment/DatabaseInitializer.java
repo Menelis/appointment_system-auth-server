@@ -1,7 +1,10 @@
 package co.appointment;
 
 import co.appointment.config.AppConfigProperties;
-import co.appointment.repository.RoleRepository;
+import co.appointment.persistence.RoleEntity;
+import co.appointment.persistence.RoleRepository;
+import co.appointment.persistence.UserEntity;
+import co.appointment.persistence.UserRepository;
 import co.appointment.shared.constant.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -35,23 +41,24 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) {
+    public void run(final String... args) {
         seedRoles();
         seedRegisteredClients();
         //TODO: Remove this code when deploying to production and separate manage user roles functionality
         seedAdminUser();
     }
     public void seedAdminUser() {
-        Role adminRole = roleRepository.findByName(RoleConstants.ADMIN_ROLE).orElse(null);
-        if(adminRole == null) {
+        RoleEntity adminRole = roleRepository.findByName(RoleConstants.ADMIN_ROLE).orElse(null);
+        if (adminRole == null) {
             return;
         }
-        User user = new User("user", "admin", "user@admin.com", "12344", passwordEncoder.encode("useradmin$$$1234"));
+        UserEntity user = UserEntity.builder().build();
+        /*new User("user", "admin", "user@admin.com", "12344", passwordEncoder.encode("useradmin$$$1234"));*/
         user.setEmailVerified(true);
-        user.addUserRole(adminRole);
+        //user.addUserRole(adminRole);
 
-        Optional<User> userOptional = userRepository.findByEmail(user.getEmail());
-        if(userOptional.isPresent()) {
+        Optional<UserEntity> userOptional = userRepository.findByEmail(user.getEmail());
+        if (userOptional.isPresent()) {
             return;
         }
         userRepository.saveAndFlush(user);
@@ -63,12 +70,12 @@ public class DatabaseInitializer implements CommandLineRunner {
                 .toList();
         registeredClients.forEach(registeredClient -> {
             RegisteredClient optionalRegisteredClient = registeredClientRepository.findByClientId(registeredClient.getClientId());
-            if(optionalRegisteredClient == null) {
+            if (optionalRegisteredClient == null) {
                 registeredClientRepository.save(registeredClient);
             }
         });
     }
-    private Optional<Role> getRoleByName(final String name) {
+    private Optional<RoleEntity> getRoleByName(final String name) {
         return roleRepository.findByName(name);
     }
     private void seedRoles() {
@@ -77,8 +84,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                 RoleConstants.TELLER_ROLE,
                 RoleConstants.CUSTOMER_ROLE);
         roles.forEach(role -> {
-            Optional<Role> dbRole = getRoleByName(role);
-            if(dbRole.isEmpty()) {
+            Optional<RoleEntity> dbRole = getRoleByName(role);
+            if (dbRole.isEmpty()) {
                 roleRepository.save(new Role(role));
             }
         });
@@ -86,20 +93,20 @@ public class DatabaseInitializer implements CommandLineRunner {
     private RegisteredClient mapToRegisteredClient(final AppConfigProperties.RegisteredClientSetting client) {
         RegisteredClient.Builder registeredClient = RegisteredClient
                 .withId(UUID.randomUUID().toString());
-        if(!StringUtils.hasText(client.getClientId())) {
+        if (!StringUtils.hasText(client.getClientId())) {
             throw new IllegalArgumentException("Client Id is required");
         }
         String forClientIdMessage = String.format("%s for client %s", client.getClientId(), client.getClientSecret());
-        if(client.getClientAuthenticationMethods().isEmpty()) {
+        if (client.getClientAuthenticationMethods().isEmpty()) {
             throw new IllegalArgumentException(String.format(forClientIdMessage, "At least one client authentication method is required"));
         }
-        if(client.getAuthorizationGrantTypes().isEmpty()) {
+        if (client.getAuthorizationGrantTypes().isEmpty()) {
             throw new IllegalArgumentException(String.format(forClientIdMessage, "At least one authorization grant type is required"));
         }
-        if(client.getRedirectUris().isEmpty()) {
+        if (client.getRedirectUris().isEmpty()) {
             throw new IllegalArgumentException(String.format(forClientIdMessage, "At least one redirect URI is required"));
         }
-        if(StringUtils.hasText(client.getClientSecret())) {
+        if (StringUtils.hasText(client.getClientSecret())) {
             registeredClient.clientSecret(passwordEncoder.encode(client.getClientSecret()));
         }
         registeredClient.clientId(client.getClientId())
@@ -119,12 +126,12 @@ public class DatabaseInitializer implements CommandLineRunner {
                         .addAll(client.getPostLogoutRedirectUris()))
                 .scopes(scopes -> scopes
                         .addAll(client.getScopes()));
-        if(client.getClientSettings() != null) {
+        if (client.getClientSettings() != null) {
             registeredClient.clientSettings(ClientSettings.builder()
                     .requireProofKey(client.getClientSettings().isRequireProofOfKey())
                     .build());
         }
-        if(client.getTokenSetting() != null) {
+        if (client.getTokenSetting() != null) {
             registeredClient.tokenSettings(TokenSettings.builder()
                     .accessTokenTimeToLive(Duration.ofMinutes(client.getTokenSetting().getAccessTokenTimeToLive()))
                     .refreshTokenTimeToLive(Duration.ofDays(client.getTokenSetting().getRefreshTokenTimeToLive()))
