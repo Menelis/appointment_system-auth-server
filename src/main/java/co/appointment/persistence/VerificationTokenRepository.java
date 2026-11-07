@@ -13,10 +13,10 @@ public interface VerificationTokenRepository
     Optional<VerificationTokenEntity> findByToken(String token);
 
     @Query("""
-            SELECT VT.id,
-                   VT.token,
-                   VT.expiry_date,
-                   VT.token_type
+            SELECT VT.id as id,
+                   VT.token as token,
+                   VT.expiry_date as expiryDate,
+                   VT.token_type as tokenType
             FROM users U JOIN verification_tokens VT ON U.id = VT.user_id
             WHERE LOWER(U.email) = LOWER(:email);
             """)

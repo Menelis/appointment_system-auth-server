@@ -11,10 +11,12 @@ import com.google.protobuf.StringValue;
 import io.grpc.stub.StreamObserver;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.grpc.server.service.GrpcService;
 
 @GrpcService
 @RequiredArgsConstructor
+@Slf4j
 public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
 
     private final UserRepository userRepository;
@@ -48,6 +50,9 @@ public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
                 .orElseThrow(() -> new RuntimeException(
                         "No verification token found with email=[%s]".formatted(request.getValue())));
 
+        if (log.isTraceEnabled()) {
+            log.trace("VerificationTokenSummary=[{}]", verificationTokenSummary);
+        }
         responseObserver.onNext(getVerificationTokenResponse(verificationTokenSummary));
         responseObserver.onCompleted();
     }
