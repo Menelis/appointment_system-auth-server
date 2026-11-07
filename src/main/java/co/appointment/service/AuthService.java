@@ -80,7 +80,12 @@ public class AuthService {
 
         publishEvent(
                 getDomainEventMessage(
-                        AuthEvent.builder().email(user.getEmail()).build(), xCorrelationId, VERIFY_EMAIL_EVENT),
+                        AuthEvent.builder()
+                                .email(user.getEmail())
+                                .tokenType(TokenType.EMAIL_VERIFICATION_TOKEN.name())
+                                .build(),
+                        xCorrelationId,
+                        VERIFY_EMAIL_EVENT),
                 Map.of());
 
         return Optional.of(ServiceResponseDto.builder()
@@ -134,7 +139,10 @@ public class AuthService {
 
             publishEvent(
                     getDomainEventMessage(
-                            AuthEvent.builder().email(user.get().getEmail()).build(),
+                            AuthEvent.builder()
+                                    .email(user.get().getEmail())
+                                    .tokenType(TokenType.EMAIL_VERIFICATION_TOKEN.name())
+                                    .build(),
                             xCorrelationId,
                             VERIFY_EMAIL_EVENT),
                     Map.of());
@@ -176,7 +184,12 @@ public class AuthService {
 
         publishEvent(
                 getDomainEventMessage(
-                        AuthEvent.builder().email(user.get().getEmail()).build(), xCorrelationId, PASSWORD_RESET_EVENT),
+                        AuthEvent.builder()
+                                .email(user.get().getEmail())
+                                .tokenType(TokenType.PASSWORD_RESET_TOKEN.name())
+                                .build(),
+                        xCorrelationId,
+                        PASSWORD_RESET_EVENT),
                 Map.of());
 
         return Optional.of(ServiceResponseDto.builder()
@@ -187,11 +200,12 @@ public class AuthService {
     }
 
     void createVerificationToken(final UserEntity user, final TokenType tokenType) {
-        VerificationTokenEntity verificationToken =
-                verificationTokenService.createVerificationToken(VerificationTokenEntity.builder()
+        VerificationTokenEntity verificationToken = verificationTokenService.createVerificationToken(
+                VerificationTokenEntity.builder()
                         .userId(user.getId())
                         .tokenType(tokenType.name())
-                        .build());
+                        .build(),
+                user.getEmail());
         if (verificationToken == null) {
             throw new RuntimeException("Verification Token could not be created for user id: " + user.getId());
         }
@@ -221,7 +235,10 @@ public class AuthService {
             createVerificationToken(user.get(), TokenType.PASSWORD_RESET_TOKEN);
             publishEvent(
                     getDomainEventMessage(
-                            AuthEvent.builder().email(user.get().getEmail()).build(),
+                            AuthEvent.builder()
+                                    .email(user.get().getEmail())
+                                    .tokenType(TokenType.PASSWORD_RESET_TOKEN.name())
+                                    .build(),
                             xCorrelationId,
                             PASSWORD_RESET_EVENT),
                     Map.of());

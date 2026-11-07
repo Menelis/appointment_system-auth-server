@@ -3,10 +3,11 @@ package co.appointment.service.grpc.server;
 import co.appointment.grpc.AuthServiceGrpc;
 import co.appointment.grpc.GetUserResponse;
 import co.appointment.grpc.GetVerificationTokenResponse;
+import co.appointment.grpc.ProcessVerificationTokenRequest;
 import co.appointment.persistence.UserEntity;
 import co.appointment.persistence.UserRepository;
+import co.appointment.persistence.VerificationTokenEntity;
 import co.appointment.persistence.VerificationTokenRepository;
-import co.appointment.shared.record.VerificationTokenSummary;
 import com.google.protobuf.StringValue;
 import io.grpc.stub.StreamObserver;
 import java.util.UUID;
@@ -44,25 +45,27 @@ public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
 
     @Override
     public void processVerificationTokenByEmail(
-            final StringValue request, final StreamObserver<GetVerificationTokenResponse> responseObserver) {
-        VerificationTokenSummary verificationTokenSummary = verificationTokenRepository
-                .findByEmail(request.getValue())
-                .orElseThrow(() -> new RuntimeException(
-                        "No verification token found with email=[%s]".formatted(request.getValue())));
+            final ProcessVerificationTokenRequest request,
+            final StreamObserver<GetVerificationTokenResponse> responseObserver) {
+        VerificationTokenEntity verificationToken = verificationTokenRepository
+                .findByVerificationToken(request.getEmail(), request.getTokenType())
+                .orElseThrow(
+                        () -> new RuntimeException("No verification token found with email=[%s] and token type=[%s]"
+                                .formatted(request.getEmail(), request.getTokenType())));
 
         if (log.isTraceEnabled()) {
-            log.trace("VerificationTokenSummary=[{}]", verificationTokenSummary);
+            log.trace("VerificationToken=[{}]", verificationToken);
         }
-        responseObserver.onNext(getVerificationTokenResponse(verificationTokenSummary));
+        responseObserver.onNext(getVerificationTokenResponse(verificationToken));
         responseObserver.onCompleted();
     }
 
-    GetVerificationTokenResponse getVerificationTokenResponse(final VerificationTokenSummary verificationTokenSummary) {
+    GetVerificationTokenResponse getVerificationTokenResponse(final VerificationTokenEntity verificationToken) {
         return GetVerificationTokenResponse.newBuilder()
-                .setId(verificationTokenSummary.id().toString())
-                .setToken(verificationTokenSummary.token())
-                .setExpiryDate(verificationTokenSummary.expiryDate())
-                .setTokenType(verificationTokenSummary.tokenType())
+                .setId(verificationToken.getId().toString())
+                .setToken(verificationToken.getToken())
+                .setExpiryDate(verificationToken.getExpiryDate())
+                .setTokenType(verificationToken.getTokenType())
                 .build();
     }
 

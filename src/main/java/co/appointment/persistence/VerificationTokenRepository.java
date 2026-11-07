@@ -1,6 +1,5 @@
 package co.appointment.persistence;
 
-import co.appointment.shared.record.VerificationTokenSummary;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jdbc.repository.query.Query;
@@ -13,12 +12,9 @@ public interface VerificationTokenRepository
     Optional<VerificationTokenEntity> findByToken(String token);
 
     @Query("""
-            SELECT VT.id as id,
-                   VT.token as token,
-                   VT.expiry_date as expiryDate,
-                   VT.token_type as tokenType
+            SELECT VT.*
             FROM users U JOIN verification_tokens VT ON U.id = VT.user_id
-            WHERE LOWER(U.email) = LOWER(:email);
+            WHERE LOWER(U.email) = LOWER(:email) AND LOWER(VT.token_type) = LOWER(:tokenType);
             """)
-    Optional<VerificationTokenSummary> findByEmail(String email);
+    Optional<VerificationTokenEntity> findByVerificationToken(String email, String tokenType);
 }

@@ -10,19 +10,11 @@ spring:
   cloud:
     config:
       enabled: false
+
   datasource:
     url: jdbc:postgresql://localhost:5432/appointment_auth_service_dev?currentSchema=spring_boot_4_1_2
     username: ${infrastructure.DB.USERNAME}
     password: ${infrastructure.DB.PASSWORD}
-#  flyway:
-#    schemas: public
-#    baseline-version: 2.0.0 # The increment is based on existing tables
-#    baseline-description: Base Migration
-#    enabled: true
-#    baseline-on-migrate: true
-#    ignore-migration-patterns:
-#      - "*:missing"
-#    clean-disabled: false
 
   kafka:
     bootstrap-servers:
@@ -36,8 +28,13 @@ spring:
       acks: -1
       batch-size: 100
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
       compression-type: zstd
+
+  grpc:
+    server:
+      port: 9090
+
 springdoc:
   api-docs:
     path: /auth-service/v3/api-docs
@@ -77,7 +74,9 @@ app:
   verification-token:
     expiration-ms: 86400000
   kafka:
-    notification-topic: ${infrastructure.ENV}-appointment-notifications
+    topic:
+      outgoing:
+        notification: ${infrastructure.ENV}-appointment-notifications
   encryption-key: "AHaeXmeTddI9EsmAOiK2l8diUFH5htXacTEP4wa5zBs="
   registered-clients:
     -
@@ -110,13 +109,15 @@ server:
   error:
     whitelabel:
       enabled: true
-grpc:
-  server:
-    port: 9090
-
 
 logging:
   level:
     root: info
+    co.appointment: trace
+    org.springframework.jdbc.core.JdbcTemplate: trace
+    org.springframework.jdbc.core.StatementCreatorUtils: TRACE
+    #org.springframework.grpc: trace
+    #io.grpc: trace
+    #io.netty: trace
     #org.springframework.security.oauth2.server.authorization.oidc.web: trace
     #org.springframework.security.web: trace
