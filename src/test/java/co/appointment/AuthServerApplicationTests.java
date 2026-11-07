@@ -8,8 +8,6 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 class AuthServerApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {}
 }

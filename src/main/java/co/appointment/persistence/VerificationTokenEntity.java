@@ -1,5 +1,7 @@
 package co.appointment.persistence;
 
+import java.time.Instant;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,10 +12,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.time.Instant;
-import java.util.UUID;
-
-@Table(name = "verification_tokens")
+@Table("verification_tokens")
 @Data
 @Builder
 @NoArgsConstructor
@@ -33,9 +32,11 @@ public class VerificationTokenEntity {
     @Version
     private Long version;
 
-    private String verificationToken;
+    private String token;
 
     private Long expiryDate;
 
     private String tokenType;
+
+    private UUID userId;
 }

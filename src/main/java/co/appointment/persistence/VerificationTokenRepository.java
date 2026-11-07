@@ -1,11 +1,24 @@
 package co.appointment.persistence;
 
+import co.appointment.shared.record.VerificationTokenSummary;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.ListPagingAndSortingRepository;
 
-import java.util.Optional;
-import java.util.UUID;
-
-public interface VerificationTokenRepository extends CrudRepository<VerificationTokenEntity, UUID>, ListPagingAndSortingRepository<VerificationTokenEntity, UUID> {
+public interface VerificationTokenRepository
+        extends CrudRepository<VerificationTokenEntity, UUID>,
+                ListPagingAndSortingRepository<VerificationTokenEntity, UUID> {
     Optional<VerificationTokenEntity> findByToken(String token);
+
+    @Query("""
+            SELECT VT.id,
+                   VT.token,
+                   VT.expiry_date,
+                   VT.token_type
+            FROM users U JOIN verification_tokens VT ON U.id = VT.user_id
+            WHERE LOWER(U.email) = LOWER(:email);
+            """)
+    Optional<VerificationTokenSummary> findByEmail(String email);
 }

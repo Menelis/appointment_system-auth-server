@@ -2,15 +2,14 @@ package co.appointment.token;
 
 import co.appointment.shared.constant.TokenConstants;
 import co.appointment.shared.security.UserDetailsImpl;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.stereotype.Component;
-
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 public class Oauth2AccessTokenCustomizer implements OAuth2TokenCustomizer<JwtEncodingContext> {
@@ -25,9 +24,7 @@ public class Oauth2AccessTokenCustomizer implements OAuth2TokenCustomizer<JwtEnc
                 }
                 UserDetailsImpl user = (UserDetailsImpl) principal;
 
-                Set<String> roles = AuthorityUtils.authorityListToSet(
-                        user.getAuthorities())
-                        .stream()
+                Set<String> roles = AuthorityUtils.authorityListToSet(user.getAuthorities()).stream()
                         .map(c -> c.replaceFirst("^ROLE_", ""))
                         .collect(Collectors.collectingAndThen(Collectors.toSet(), Collections::unmodifiableSet));
                 claims.put(TokenConstants.ROLES, roles);

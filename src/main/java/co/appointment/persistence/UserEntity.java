@@ -1,5 +1,7 @@
 package co.appointment.persistence;
 
+import java.time.Instant;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,9 +11,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
-
-import java.time.Instant;
-import java.util.UUID;
 
 @Table(name = "users")
 @Data

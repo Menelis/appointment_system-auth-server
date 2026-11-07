@@ -2,15 +2,14 @@ package co.appointment.cache;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
 
 /**
  * Helpful <a href="https://medium.com/@kasunharitha55/unlocking-secure-authentication-building-an-oauth2-flow-with-spring-boot-angular-pkce-167bae9a26df">blog</a> on overcoming common pitfalls.
@@ -24,13 +23,7 @@ public class CustomRequestCache extends HttpSessionRequestCache {
      */
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final List<String> ignoredPatterns = List.of(
-            "/.well-known/appspecific/**",
-            "/error/**",
-            "/default-ui.css",
-            "/favicon.ico",
-            "/favicon.ico*",
-            "/assets*"
-    );
+            "/.well-known/appspecific/**", "/error/**", "/default-ui.css", "/favicon.ico", "/favicon.ico*", "/assets*");
 
     /**
      * Helper to check if a URI matches any of our ignored patterns.
@@ -47,11 +40,9 @@ public class CustomRequestCache extends HttpSessionRequestCache {
     }
 
     @Override
-    public void saveRequest(
-            final HttpServletRequest request,
-            final HttpServletResponse response) {
-        String requestURI =  request.getRequestURI();
-        //If the request URI matches an ignored pattern, don't save it!
+    public void saveRequest(final HttpServletRequest request, final HttpServletResponse response) {
+        String requestURI = request.getRequestURI();
+        // If the request URI matches an ignored pattern, don't save it!
         if (matchesIgnoredPattern(requestURI)) {
             return;
         }
@@ -59,10 +50,8 @@ public class CustomRequestCache extends HttpSessionRequestCache {
     }
 
     @Override
-    public SavedRequest getRequest(
-            final HttpServletRequest currentRequest,
-            final HttpServletResponse response) {
-        SavedRequest savedRequest =  super.getRequest(currentRequest, response);
+    public SavedRequest getRequest(final HttpServletRequest currentRequest, final HttpServletResponse response) {
+        SavedRequest savedRequest = super.getRequest(currentRequest, response);
         if (savedRequest != null) {
             try {
                 String fullUrl = savedRequest.getRedirectUrl();

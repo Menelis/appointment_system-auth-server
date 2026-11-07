@@ -4,32 +4,67 @@ import co.appointment.grpc.AuthServiceGrpc;
 import co.appointment.grpc.GetUserByEmailRequest;
 import co.appointment.grpc.GetUserByIdRequest;
 import co.appointment.grpc.GetUserResponse;
+import co.appointment.grpc.GetVerificationTokenRequest;
+import co.appointment.grpc.GetVerificationTokenResponse;
 import co.appointment.persistence.UserEntity;
 import co.appointment.persistence.UserRepository;
+import co.appointment.persistence.VerificationTokenRepository;
+import co.appointment.shared.record.VerificationTokenSummary;
 import io.grpc.stub.StreamObserver;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.grpc.server.service.GrpcService;
-
-import java.util.UUID;
 
 @GrpcService
 @RequiredArgsConstructor
 public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
 
     private final UserRepository userRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
 
     @Override
-    public void processUserByEmail(final GetUserByEmailRequest request, final StreamObserver<GetUserResponse> responseObserver) {
-        UserEntity user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new RuntimeException(String.format("User not found with email: %s", request.getEmail())));
+    public void processUserByEmail(
+            final GetUserByEmailRequest request, final StreamObserver<GetUserResponse> responseObserver) {
+        UserEntity user = userRepository
+                .findByEmail(request.getEmail())
+                .orElseThrow(
+                        () -> new RuntimeException(String.format("User not found with email: %s", request.getEmail())));
         responseObserver.onNext(getUserResponse(user));
         responseObserver.onCompleted();
     }
+
     @Override
-    public void processUserById(final GetUserByIdRequest request, final StreamObserver<GetUserResponse> responseObserver) {
-        UserEntity user = userRepository.findById(UUID.fromString(request.getId())).orElseThrow(() -> new RuntimeException(String.format("User not found with id: %s", request.getId())));
+    public void processUserById(
+            final GetUserByIdRequest request, final StreamObserver<GetUserResponse> responseObserver) {
+        UserEntity user = userRepository
+                .findById(UUID.fromString(request.getId()))
+                .orElseThrow(() -> new RuntimeException(String.format("User not found with id: %s", request.getId())));
         responseObserver.onNext(getUserResponse(user));
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void processVerificationTokenByEmail(
+            final GetVerificationTokenRequest request,
+            final StreamObserver<GetVerificationTokenResponse> responseObserver) {
+        VerificationTokenSummary verificationTokenSummary = verificationTokenRepository
+                .findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException(
+                        "No verification token found with email=[%s]".formatted(request.getEmail())));
+
+        responseObserver.onNext(getVerificationTokenResponse(verificationTokenSummary));
+        responseObserver.onCompleted();
+    }
+
+    GetVerificationTokenResponse getVerificationTokenResponse(final VerificationTokenSummary verificationTokenSummary) {
+        return GetVerificationTokenResponse.newBuilder()
+                .setId(verificationTokenSummary.id().toString())
+                .setToken(verificationTokenSummary.token())
+                .setExpiryDate(verificationTokenSummary.expiryDate())
+                .setTokenType(verificationTokenSummary.tokenType())
+                .build();
+    }
+
     private GetUserResponse getUserResponse(final UserEntity user) {
         GetUserResponse.Builder userResponse = GetUserResponse.newBuilder()
                 .setId(user.getId().toString())
@@ -39,10 +74,10 @@ public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
                 .setEmail(user.getEmail())
                 .setFullName(String.format("%s %s", user.getFirstName(), user.getLastName()));
 
-        //Add roles to userResponse
-//        user.getUserRoles().stream()
-//                .map(ur -> ur.getRole().getName())
-//                .forEach(userResponse::addRoles);
+        // Add roles to userResponse
+        //        user.getUserRoles().stream()
+        //                .map(ur -> ur.getRole().getName())
+        //                .forEach(userResponse::addRoles);
         return userResponse.build();
     }
 }

@@ -2,10 +2,13 @@ package co.appointment.config;
 
 import co.appointment.shared.model.CorsSettings;
 import co.appointment.shared.model.OpenApiSettings;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.util.*;
 
 @ConfigurationProperties(prefix = "app")
 @Data
@@ -21,11 +24,21 @@ public class AppConfigProperties {
     private String clientUrl;
     private EmailTemplateSetting emailTemplate;
 
-
     @Data
     public static class KafkaSettings {
-        private String notificationTopic;
+        private TopicConfig topic;
     }
+
+    @Data
+    public static class TopicConfig {
+        private Outgoing outgoing;
+    }
+
+    @Data
+    public static class Outgoing {
+        private String notification;
+    }
+
     @Data
     public static class VerificationTokenSettings {
         private Integer expirationMs;
@@ -35,6 +48,7 @@ public class AppConfigProperties {
     public static class ClientSetting {
         private boolean requireProofOfKey = false;
     }
+
     @Data
     public static class RegisteredClientSetting {
         private String clientId;
@@ -47,11 +61,13 @@ public class AppConfigProperties {
         private ClientSetting clientSettings = new ClientSetting();
         private TokenSetting tokenSetting = new TokenSetting();
     }
+
     @Data
     public static class TokenSetting {
         private long accessTokenTimeToLive = 120;
         private long refreshTokenTimeToLive = 120;
     }
+
     @Data
     public static class EmailTemplateSetting {
         private String verifyEmailTemplate;
