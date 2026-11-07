@@ -1,15 +1,13 @@
 package co.appointment.service.grpc.server;
 
 import co.appointment.grpc.AuthServiceGrpc;
-import co.appointment.grpc.GetUserByEmailRequest;
-import co.appointment.grpc.GetUserByIdRequest;
 import co.appointment.grpc.GetUserResponse;
-import co.appointment.grpc.GetVerificationTokenRequest;
 import co.appointment.grpc.GetVerificationTokenResponse;
 import co.appointment.persistence.UserEntity;
 import co.appointment.persistence.UserRepository;
 import co.appointment.persistence.VerificationTokenRepository;
 import co.appointment.shared.record.VerificationTokenSummary;
+import com.google.protobuf.StringValue;
 import io.grpc.stub.StreamObserver;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,34 +21,32 @@ public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
     private final VerificationTokenRepository verificationTokenRepository;
 
     @Override
-    public void processUserByEmail(
-            final GetUserByEmailRequest request, final StreamObserver<GetUserResponse> responseObserver) {
+    public void processUserByEmail(final StringValue request, final StreamObserver<GetUserResponse> responseObserver) {
         UserEntity user = userRepository
-                .findByEmail(request.getEmail())
+                .findByEmail(request.getValue())
                 .orElseThrow(
-                        () -> new RuntimeException(String.format("User not found with email: %s", request.getEmail())));
+                        () -> new RuntimeException(String.format("User not found with email: %s", request.getValue())));
         responseObserver.onNext(getUserResponse(user));
         responseObserver.onCompleted();
     }
 
     @Override
-    public void processUserById(
-            final GetUserByIdRequest request, final StreamObserver<GetUserResponse> responseObserver) {
+    public void processUserById(final StringValue request, final StreamObserver<GetUserResponse> responseObserver) {
         UserEntity user = userRepository
-                .findById(UUID.fromString(request.getId()))
-                .orElseThrow(() -> new RuntimeException(String.format("User not found with id: %s", request.getId())));
+                .findById(UUID.fromString(request.getValue()))
+                .orElseThrow(
+                        () -> new RuntimeException(String.format("User not found with id: %s", request.getValue())));
         responseObserver.onNext(getUserResponse(user));
         responseObserver.onCompleted();
     }
 
     @Override
     public void processVerificationTokenByEmail(
-            final GetVerificationTokenRequest request,
-            final StreamObserver<GetVerificationTokenResponse> responseObserver) {
+            final StringValue request, final StreamObserver<GetVerificationTokenResponse> responseObserver) {
         VerificationTokenSummary verificationTokenSummary = verificationTokenRepository
-                .findByEmail(request.getEmail())
+                .findByEmail(request.getValue())
                 .orElseThrow(() -> new RuntimeException(
-                        "No verification token found with email=[%s]".formatted(request.getEmail())));
+                        "No verification token found with email=[%s]".formatted(request.getValue())));
 
         responseObserver.onNext(getVerificationTokenResponse(verificationTokenSummary));
         responseObserver.onCompleted();
