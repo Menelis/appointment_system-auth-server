@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.internalServerError()
                 .body(ServiceResponseDto.builder()
                         .success(false)
-                        .errorDescription(exception.getClass().getSimpleName())
+                        .responseMessage(exception.getClass().getSimpleName())
                         .build());
     }
 
@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(ServiceResponseDto.builder()
                         .success(false)
-                        .errorDescription("Invalid username or password")
+                        .responseMessage("Invalid username or password")
                         .build());
     }
 

@@ -77,11 +77,6 @@ public class AuthGrcpService extends AuthServiceGrpc.AuthServiceImplBase {
                 .setContactNo(user.getContactNo())
                 .setEmail(user.getEmail())
                 .setFullName(String.format("%s %s", user.getFirstName(), user.getLastName()));
-
-        // Add roles to userResponse
-        //        user.getUserRoles().stream()
-        //                .map(ur -> ur.getRole().getName())
-        //                .forEach(userResponse::addRoles);
         return userResponse.build();
     }
 }

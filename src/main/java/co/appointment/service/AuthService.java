@@ -51,7 +51,7 @@ public class AuthService {
             throw new ServiceException(
                     HttpStatus.CONFLICT,
                     ServiceResponseDto.builder()
-                            .errorDescription("Email %s is already in use".formatted(signUpRequest.getEmail()))
+                            .responseMessage("Email %s is already in use".formatted(signUpRequest.getEmail()))
                             .build());
         }
 
@@ -91,6 +91,7 @@ public class AuthService {
         return Optional.of(ServiceResponseDto.builder()
                 .success(true)
                 .correlationId(xCorrelationId)
+                .responseMessage("User registered successfully.Please check your email for account verification.")
                 .build());
     }
 
@@ -122,7 +123,7 @@ public class AuthService {
                     HttpStatus.BAD_REQUEST,
                     ServiceResponseDto.builder()
                             .success(false)
-                            .errorDescription("Invalid verification token")
+                            .responseMessage("Invalid verification token")
                             .correlationId(xCorrelationId)
                             .build());
         }
@@ -151,7 +152,7 @@ public class AuthService {
                     HttpStatus.BAD_REQUEST,
                     ServiceResponseDto.builder()
                             .success(false)
-                            .errorDescription(
+                            .responseMessage(
                                     "The verification token has expired. Please check your email for new registration confirmation.")
                             .correlationId(xCorrelationId)
                             .build());
@@ -164,6 +165,7 @@ public class AuthService {
         return Optional.of(ServiceResponseDto.builder()
                 .success(true)
                 .correlationId(xCorrelationId)
+                .responseMessage("The email confirmation has been completed.")
                 .build());
     }
 
@@ -176,7 +178,7 @@ public class AuthService {
                     ServiceResponseDto.builder()
                             .success(false)
                             .correlationId(xCorrelationId)
-                            .errorDescription("No user was found with the supplied email")
+                            .responseMessage("No user was found with the supplied email")
                             .build());
         }
 
@@ -195,7 +197,7 @@ public class AuthService {
         return Optional.of(ServiceResponseDto.builder()
                 .success(true)
                 .correlationId(xCorrelationId)
-                .successMessage("Password reset email has been sent to your email")
+                .responseMessage("Password reset has been sent to your email")
                 .build());
     }
 
@@ -223,7 +225,7 @@ public class AuthService {
                     ServiceResponseDto.builder()
                             .correlationId(xCorrelationId)
                             .success(false)
-                            .errorDescription("Invalid verification token")
+                            .responseMessage("Invalid verification token")
                             .build());
         }
         Optional<UserEntity> user = userRepository.findByEmail(passwordResetRequest.getEmail());
@@ -247,7 +249,7 @@ public class AuthService {
                     ServiceResponseDto.builder()
                             .success(false)
                             .correlationId(xCorrelationId)
-                            .errorDescription(
+                            .responseMessage(
                                     "The password reset token has expired. Please check your email for new password reset.")
                             .build());
         }
@@ -256,7 +258,7 @@ public class AuthService {
         userRepository.save(userEntity);
         return Optional.of(ServiceResponseDto.builder()
                 .success(true)
-                .successMessage("Password has been changed successfully")
+                .responseMessage("Password has been changed successfully")
                 .correlationId(xCorrelationId)
                 .build());
     }
