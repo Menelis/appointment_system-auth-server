@@ -1,23 +1,23 @@
 package co.appointment.util;
 
-import co.appointment.entity.User;
+import co.appointment.persistence.RoleEntity;
+import co.appointment.persistence.UserEntity;
 import co.appointment.shared.security.UserDetailsImpl;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
+@SuppressWarnings({"HideUtilityClassConstructor"})
 public class UserDetailImplUtils {
-    public static UserDetailsImpl build(final User user) {
-        Set<GrantedAuthority> authorities = user.getUserRoles()
-                .stream()
-                .map(role -> new SimpleGrantedAuthority(String.format("ROLE_%s",
-                        role.
-                                getRole()
-                                .getName()
-                                .toUpperCase())))
+
+    public static UserDetailsImpl build(final UserEntity user, final List<RoleEntity> roles) {
+        Set<GrantedAuthority> authorities = roles.stream()
+                .map(role -> new SimpleGrantedAuthority(
+                        "ROLE_%s".formatted(role.getName().toUpperCase())))
                 .collect(Collectors.toSet());
+
         return new UserDetailsImpl(
                 user.getId(),
                 user.getFirstName(),

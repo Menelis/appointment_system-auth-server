@@ -2,20 +2,19 @@ spring:
   cloud:
     config:
       enabled: false
+
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    database-platform: org.hibernate.dialect.H2Dialect
-    open-in-view: false
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+
+  grpc:
+    server:
+      port: 9090
+
+#  flyway:
+#    enabled: false
 
 app:
   email-template:
@@ -47,8 +46,11 @@ app:
       version: 1.0.0
   verification-token:
     expiration-ms: 86400000
+
   kafka:
-    notification-topic: ${infrastructure.ENV}-appointment-notifications
+    topic:
+      outgoing:
+        notification: ${infrastructure.ENV}-appointment-notifications
   encryption-key: "encryption key"
   registered-clients:
     -
@@ -75,6 +77,6 @@ app:
   client-url: http://localhost:4200
 
 
-grpc:
-  server:
-    port: 9090
+
+server:
+  port: 8082

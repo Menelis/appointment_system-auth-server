@@ -1,139 +1,265 @@
 package co.appointment.service;
 
+import static co.appointment.shared.constant.EventTypeConstants.PASSWORD_RESET_EVENT;
+import static co.appointment.shared.constant.EventTypeConstants.VERIFY_EMAIL_EVENT;
+
 import co.appointment.config.AppConfigProperties;
-import co.appointment.entity.ETokenType;
-import co.appointment.entity.Role;
-import co.appointment.entity.User;
-import co.appointment.entity.VerificationToken;
+import co.appointment.enums.TokenType;
+import co.appointment.kafka.KafkaProducerService;
 import co.appointment.payload.request.PasswordResetRequest;
 import co.appointment.payload.request.SignUpRequest;
-import co.appointment.repository.RoleRepository;
-import co.appointment.repository.UserRepository;
-import co.appointment.shared.constant.EmailConstants;
-import co.appointment.shared.constant.EventTypeConstants;
+import co.appointment.persistence.RoleEntity;
+import co.appointment.persistence.RoleRepository;
+import co.appointment.persistence.UserEntity;
+import co.appointment.persistence.UserRepository;
+import co.appointment.persistence.UserRoleEntity;
+import co.appointment.persistence.UserRoleRepository;
+import co.appointment.persistence.VerificationTokenEntity;
 import co.appointment.shared.constant.RoleConstants;
-import co.appointment.shared.event.EmailEvent;
-import co.appointment.shared.payload.response.ApiResponse;
-import co.appointment.shared.service.EncryptionService;
-import co.appointment.util.ObjectUtils;
+import co.appointment.shared.dto.ServiceResponseDto;
+import co.appointment.shared.event.AuthEvent;
+import co.appointment.shared.event.DomainEventMessage;
+import co.appointment.shared.exception.ServiceException;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.AbstractMap;
-import java.util.Map;
-
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
+    // Repositories
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
-    private final NotificationEventService notificationEventService;
-    private final AppConfigProperties appConfigProperties;
+    private final UserRoleRepository userRoleRepository;
+
+    // Services
+    private final AppConfigProperties configProperties;
     private final VerificationTokenService verificationTokenService;
-    private final EncryptionService encryptionService;
+    private final KafkaProducerService kafkaProducerService;
 
-    private static final Map<String, Object> EMAIL_VERIFICATION_EVENT_HEADERS = Map.of(
-            EventTypeConstants.EVENT_TYPE, EventTypeConstants.VERIFY_EMAIL_EVENT);
-    private static final Map<String, Object> EMAIL_PASSWORD_RESET_EVENT_HEADERS = Map.of(
-            EventTypeConstants.EVENT_TYPE, EventTypeConstants.PASSWORD_RESET_EVENT);
+    public Optional<ServiceResponseDto> registerUser(final SignUpRequest signUpRequest, final UUID xCorrelationId) {
 
-
-    public ApiResponse<?> registerUser(final SignUpRequest signUpRequest) {
-        if(userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return new ApiResponse<>(false, String.format("Email %s is already in use", signUpRequest.getEmail()));
+        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+            throw new ServiceException(
+                    HttpStatus.CONFLICT,
+                    ServiceResponseDto.builder()
+                            .responseMessage("Email %s is already in use".formatted(signUpRequest.getEmail()))
+                            .build());
         }
-        User user = new User(
-                signUpRequest.getFirstName(),
-                signUpRequest.getLastName(),
-                signUpRequest.getEmail(),
-                signUpRequest.getContactNo(),
-                passwordEncoder.encode(signUpRequest.getPassword()));
-        //Set default role
-        Role customerRole = roleRepository.findByName(RoleConstants.CUSTOMER_ROLE).orElseThrow(() -> new RuntimeException(String.format("No role with name: %s was found in the db", RoleConstants.CUSTOMER_ROLE)));
-        user.addUserRole(customerRole);
+
+        UserEntity user = UserEntity.builder()
+                .firstName(signUpRequest.getFirstName())
+                .lastName(signUpRequest.getLastName())
+                .email(signUpRequest.getEmail())
+                .contactNo(signUpRequest.getContactNo())
+                .password(passwordEncoder.encode(signUpRequest.getPassword()))
+                .build();
+
+        // Set default role
+        RoleEntity customerRole = roleRepository
+                .findByName(RoleConstants.CUSTOMER_ROLE)
+                .orElseThrow(() -> new RuntimeException(
+                        String.format("No role with name: %s was found in the db", RoleConstants.CUSTOMER_ROLE)));
+
         userRepository.save(user);
-        // Generate verification token
-        sendEmailEvent(user, createVerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
-        return new ApiResponse<>(true, "User registered successfully.Please check your email for account verification.");
-    }
-    private void  sendEmailEvent(
-            final User user, final VerificationToken verificationToken, final String emailType) {
-        final String clientUrl = appConfigProperties.getClientUrl();
 
-        final AbstractMap.SimpleImmutableEntry<String, String> emailBodyAndSubject = switch (emailType) {
-            case EmailConstants.VERIFY_EMAIL_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
-                    EmailConstants.VERIFY_EMAIL_SUBJECT, ObjectUtils.getUserRegistrationEmailBody(clientUrl, user, verificationToken, appConfigProperties.getEmailTemplate().getVerifyEmailTemplate()));
-            case EmailConstants.PASSWORD_RESET_MAIL -> new AbstractMap.SimpleImmutableEntry<>(
-                    EmailConstants.PASSWORD_RESET_SUBJECT, ObjectUtils.getPasswordResetEmailBody(clientUrl, verificationToken, user, appConfigProperties.getEmailTemplate().getResetPasswordEmailTemplate()));
-            default -> throw new IllegalStateException("Unexpected value: " + emailType);
-        };
+        userRoleRepository.save(UserRoleEntity.builder()
+                .userId(user.getId())
+                .roleId(customerRole.getId())
+                .build());
 
-        //Encrypt email body and recipientEmail
-        final String mailBody = encryptionService.encryptText(emailBodyAndSubject.getValue());
-        final String recipientEmail = encryptionService.encryptText(user.getEmail());
-        switch (emailType) {
-            case EmailConstants.VERIFY_EMAIL_MAIL -> notificationEventService.sendEmailEvent(new EmailEvent(
-                            recipientEmail, EmailConstants.VERIFY_EMAIL_SUBJECT, mailBody, true, true),
-                    EMAIL_VERIFICATION_EVENT_HEADERS);
-            case EmailConstants.PASSWORD_RESET_MAIL -> notificationEventService.sendEmailEvent(
-                    new EmailEvent(recipientEmail, EmailConstants.PASSWORD_RESET_SUBJECT, mailBody, true, true),
-                    EMAIL_PASSWORD_RESET_EVENT_HEADERS);
-            default -> throw new IllegalStateException("Unexpected value: " + emailType);
-        }
+        createVerificationToken(user, TokenType.EMAIL_VERIFICATION_TOKEN);
+
+        publishEvent(
+                getDomainEventMessage(
+                        AuthEvent.builder()
+                                .email(user.getEmail())
+                                .tokenType(TokenType.EMAIL_VERIFICATION_TOKEN.name())
+                                .build(),
+                        xCorrelationId,
+                        VERIFY_EMAIL_EVENT),
+                Map.of());
+
+        return Optional.of(ServiceResponseDto.builder()
+                .success(true)
+                .correlationId(xCorrelationId)
+                .responseMessage("User registered successfully.Please check your email for account verification.")
+                .build());
     }
-    public ApiResponse<?> confirmEmail(final String email, final String token) {
-        VerificationToken verificationToken = verificationTokenService.getVerificationToken(token);
-        if(verificationToken == null) {
-            return new ApiResponse<>(false, "Invalid verification token");
+
+    DomainEventMessage<AuthEvent> getDomainEventMessage(
+            final AuthEvent authEvent, final UUID xCorrelationId, final String eventType) {
+
+        return DomainEventMessage.<AuthEvent>builder()
+                .event(authEvent)
+                .correlationId(xCorrelationId.toString())
+                .eventType(eventType)
+                .build();
+    }
+
+    void publishEvent(final DomainEventMessage<AuthEvent> domainEventMessage, final Map<String, Object> headers) {
+        String topic = configProperties.getKafka().getTopic().getOutgoing().getNotification();
+        if (log.isTraceEnabled()) {
+            log.trace("Event=[{}] to be sent to topic=[{}]", domainEventMessage, topic);
         }
-        User user = userRepository.findByEmail(email).orElse(null);
-        if(user == null) {
-            return new ApiResponse<>(false, "No user was found with the supplied email");
+        kafkaProducerService.publish(topic, domainEventMessage, headers);
+    }
+
+    public Optional<ServiceResponseDto> confirmEmail(
+            final String email, final String token, final UUID xCorrelationId) {
+
+        VerificationTokenEntity verificationToken = verificationTokenService.getVerificationToken(token);
+
+        if (verificationToken == null) {
+            throw new ServiceException(
+                    HttpStatus.BAD_REQUEST,
+                    ServiceResponseDto.builder()
+                            .success(false)
+                            .responseMessage("Invalid verification token")
+                            .correlationId(xCorrelationId)
+                            .build());
         }
-        if(verificationTokenService.tokenExpired(verificationToken)) {
-            sendEmailEvent(user, createVerificationToken(user, ETokenType.EMAIL_VERIFICATION_TOKEN), EmailConstants.VERIFY_EMAIL_MAIL);
-            return new ApiResponse<>(false, "The verification token has expired. Please check your email for new registration confirmation.");
+
+        Optional<UserEntity> user = userRepository.findByEmail(email);
+
+        if (user.isEmpty()) {
+            throw new ServiceException(HttpStatus.NO_CONTENT);
+        }
+
+        if (verificationTokenService.tokenExpired(verificationToken)) {
+
+            createVerificationToken(user.get(), TokenType.EMAIL_VERIFICATION_TOKEN);
+
+            publishEvent(
+                    getDomainEventMessage(
+                            AuthEvent.builder()
+                                    .email(user.get().getEmail())
+                                    .tokenType(TokenType.EMAIL_VERIFICATION_TOKEN.name())
+                                    .build(),
+                            xCorrelationId,
+                            VERIFY_EMAIL_EVENT),
+                    Map.of());
+
+            throw new ServiceException(
+                    HttpStatus.BAD_REQUEST,
+                    ServiceResponseDto.builder()
+                            .success(false)
+                            .responseMessage(
+                                    "The verification token has expired. Please check your email for new registration confirmation.")
+                            .correlationId(xCorrelationId)
+                            .build());
         }
         // Confirm email verified
-        user.setEmailVerified(true);
-        userRepository.save(user);
-        return new ApiResponse<>(true, "The email confirmation has been completed.");
-    }
-    public ApiResponse<?> forgotPassword(final String email) {
-        User user = userRepository.findByEmail(email).orElse(null);
-        if(user == null) {
-            return new ApiResponse<>(false, "No user was found with the supplied email");
-        }
-        sendEmailEvent(user, createVerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
-        return new ApiResponse<>(true, "Password reset email has been sent to your email");
-    }
-    private VerificationToken createVerificationToken(final User user,
-                                                      final ETokenType tokenType) {
-        VerificationToken verificationToken = verificationTokenService.createVerificationToken(new VerificationToken(user, tokenType.name()));
-        if(verificationToken == null) {
-            throw new RuntimeException("Verification Token could not be created for user id: "+ user.getId());
-        }
-        return verificationToken;
+        UserEntity userEntity = user.get();
+        userEntity.setEmailVerified(true);
+        userRepository.save(userEntity);
+
+        return Optional.of(ServiceResponseDto.builder()
+                .success(true)
+                .correlationId(xCorrelationId)
+                .responseMessage("The email confirmation has been completed.")
+                .build());
     }
 
-    public ApiResponse<?> passwordReset(final PasswordResetRequest passwordResetRequest) {
-        VerificationToken verificationToken = verificationTokenService.getVerificationToken(passwordResetRequest.getToken());
-        if(verificationToken == null) {
-            return new ApiResponse<>(false, "Invalid verification token");
+    public Optional<ServiceResponseDto> forgotPassword(final String email, final UUID xCorrelationId) {
+        Optional<UserEntity> user = userRepository.findByEmail(email);
+
+        if (user.isEmpty()) {
+            throw new ServiceException(
+                    HttpStatus.BAD_REQUEST,
+                    ServiceResponseDto.builder()
+                            .success(false)
+                            .correlationId(xCorrelationId)
+                            .responseMessage("No user was found with the supplied email")
+                            .build());
         }
-        User user = userRepository.findByEmail(passwordResetRequest.getEmail()).orElse(null);
-        if(user == null) {
-            return new ApiResponse<>(false, "No user was found with the supplied email");
+
+        createVerificationToken(user.get(), TokenType.PASSWORD_RESET_TOKEN);
+
+        publishEvent(
+                getDomainEventMessage(
+                        AuthEvent.builder()
+                                .email(user.get().getEmail())
+                                .tokenType(TokenType.PASSWORD_RESET_TOKEN.name())
+                                .build(),
+                        xCorrelationId,
+                        PASSWORD_RESET_EVENT),
+                Map.of());
+
+        return Optional.of(ServiceResponseDto.builder()
+                .success(true)
+                .correlationId(xCorrelationId)
+                .responseMessage("Password reset has been sent to your email")
+                .build());
+    }
+
+    void createVerificationToken(final UserEntity user, final TokenType tokenType) {
+        VerificationTokenEntity verificationToken = verificationTokenService.createVerificationToken(
+                VerificationTokenEntity.builder()
+                        .userId(user.getId())
+                        .tokenType(tokenType.name())
+                        .build(),
+                user.getEmail());
+        if (verificationToken == null) {
+            throw new RuntimeException("Verification Token could not be created for user id: " + user.getId());
         }
-        if(verificationTokenService.tokenExpired(verificationToken)) {
-            sendEmailEvent(user, createVerificationToken(user, ETokenType.PASSWORD_RESET_TOKEN), EmailConstants.PASSWORD_RESET_MAIL);
-            return new ApiResponse<>(false, "The password reset token has expired. Please check your email for new password reset.");
+    }
+
+    public Optional<ServiceResponseDto> passwordReset(
+            final PasswordResetRequest passwordResetRequest, final UUID xCorrelationId) {
+
+        VerificationTokenEntity verificationToken =
+                verificationTokenService.getVerificationToken(passwordResetRequest.getToken());
+
+        if (verificationToken == null) {
+            throw new ServiceException(
+                    HttpStatus.BAD_REQUEST,
+                    ServiceResponseDto.builder()
+                            .correlationId(xCorrelationId)
+                            .success(false)
+                            .responseMessage("Invalid verification token")
+                            .build());
         }
-        user.setPassword(passwordEncoder.encode(passwordResetRequest.getPassword()));
-        userRepository.save(user);
-        return new ApiResponse<>(true, "Password has been changed successfully");
+        Optional<UserEntity> user = userRepository.findByEmail(passwordResetRequest.getEmail());
+        if (user.isEmpty()) {
+            throw new ServiceException(HttpStatus.NO_CONTENT);
+            // return new ApiResponse<>(false, "No user was found with the supplied email");
+        }
+        if (verificationTokenService.tokenExpired(verificationToken)) {
+            createVerificationToken(user.get(), TokenType.PASSWORD_RESET_TOKEN);
+            publishEvent(
+                    getDomainEventMessage(
+                            AuthEvent.builder()
+                                    .email(user.get().getEmail())
+                                    .tokenType(TokenType.PASSWORD_RESET_TOKEN.name())
+                                    .build(),
+                            xCorrelationId,
+                            PASSWORD_RESET_EVENT),
+                    Map.of());
+            throw new ServiceException(
+                    HttpStatus.BAD_REQUEST,
+                    ServiceResponseDto.builder()
+                            .success(false)
+                            .correlationId(xCorrelationId)
+                            .responseMessage(
+                                    "The password reset token has expired. Please check your email for new password reset.")
+                            .build());
+        }
+        UserEntity userEntity = user.get();
+        userEntity.setPassword(passwordEncoder.encode(passwordResetRequest.getPassword()));
+        userRepository.save(userEntity);
+        return Optional.of(ServiceResponseDto.builder()
+                .success(true)
+                .responseMessage("Password has been changed successfully")
+                .correlationId(xCorrelationId)
+                .build());
     }
 }

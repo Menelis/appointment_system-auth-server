@@ -1,6 +1,6 @@
-package co.appointment.entity;
+package co.appointment.enums;
 
-public enum ETokenType {
+public enum TokenType {
     /**
      * Password reset token.
      */

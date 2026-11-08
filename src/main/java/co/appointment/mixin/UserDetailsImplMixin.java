@@ -3,10 +3,9 @@ package co.appointment.mixin;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.springframework.security.core.GrantedAuthority;
-
 import java.util.Collection;
 import java.util.UUID;
+import org.springframework.security.core.GrantedAuthority;
 
 public abstract class UserDetailsImplMixin {
 
