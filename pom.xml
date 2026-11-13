@@ -15,7 +15,7 @@
     <description>Appointment Booking System Auth Server</description>
     <properties>
         <java.version>25</java.version>
-        <spring-cloud.version>2025.1.2</spring-cloud.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
         <appointment-system-shared.version>1.0.0</appointment-system-shared.version>
         <springdoc-openapi-starter-webmvc-ui.version>3.2.0</springdoc-openapi-starter-webmvc-ui.version>
         <code-format.version>1.0.0</code-format.version>
